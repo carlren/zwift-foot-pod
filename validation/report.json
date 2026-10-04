@@ -1,0 +1,43 @@
+{
+  "started_utc": "2026-10-04T17:24:42.505532+00:00",
+  "result": "PASS",
+  "imu": {
+    "who_am_i": "0x6a",
+    "sample_rate_hz": 105.0,
+    "mean_acceleration_g": 1.0347,
+    "errors": 0
+  },
+  "address": "FF:E3:4B:BE:98:B1",
+  "advertised_name": "Carl Foot Pod",
+  "gatt": {
+    "service": "1814",
+    "measurement": "2a53",
+    "cccd": true,
+    "feature": "0000",
+    "location": 6
+  },
+  "mock_checks": [
+    {
+      "cadence_spm": 109,
+      "packets": 3,
+      "raw": "0046016d"
+    },
+    {
+      "cadence_spm": 180,
+      "packets": 3,
+      "raw": "001a02b4"
+    },
+    {
+      "cadence_spm": 255,
+      "packets": 3,
+      "raw": "00fa02ff"
+    }
+  ],
+  "invalid_commands": "rejected out of range, overflow, negative, and truncated input",
+  "idle_without_serial_host": {
+    "packets": 4,
+    "raw": "00000000"
+  },
+  "reconnect": "passed",
+  "notify_errors": 0
+}
