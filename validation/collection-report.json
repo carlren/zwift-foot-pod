@@ -1,5 +1,5 @@
 {
-  "started_utc": "2026-10-04T17:20:56.465273+00:00",
+  "started_utc": "2026-10-06T04:32:11.628924+00:00",
   "label": "collection-validation",
   "seconds_requested": 20,
   "foot": "left",
@@ -12,13 +12,13 @@
   "accel_range_g": 8,
   "gyro_range_dps": 1000,
   "completed": true,
-  "samples": 2108,
+  "samples": 2107,
   "missing_packets": 0,
   "clipped_samples": 0,
   "timing_gaps_over_20ms": 0,
-  "max_interval_us": 14649,
+  "max_interval_us": 10742,
   "address": "FF:E3:4B:BE:98:B1",
-  "firmware": "0.2.0",
+  "firmware": "0.2.1",
   "status_before": {
     "version": 1,
     "imu_ok": true,
@@ -35,15 +35,15 @@
     "collecting": false,
     "subscribed": false,
     "who_am_i": 106,
-    "sent": 2108,
+    "sent": 2107,
     "dropped": 0,
     "imu_errors": 0
   },
-  "ended_utc": "2026-10-04T17:21:25.015961+00:00",
-  "device_duration_s": 20.065429,
-  "received_hz": 105.006,
-  "sampled_hz": 105.006,
+  "ended_utc": "2026-10-06T04:32:41.227774+00:00",
+  "device_duration_s": 20.054688,
+  "received_hz": 105.013,
+  "sampled_hz": 105.013,
   "validation": "PASS: packet format, Bluetooth-only capture, CSV, gaps, stop, reconnect, cadence",
-  "mean_acceleration_g": 1.0345,
-  "recording": "/home/carlren/Documents/zwift-foot-pod-firmware/recordings/20261004T172056_465190Z_collection-validation"
+  "mean_acceleration_g": 1.0259,
+  "recording": "/home/carlren/Documents/zwift-foot-pod-firmware/recordings/20261006T043211_628804Z_collection-validation"
 }

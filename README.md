@@ -3,9 +3,31 @@
 Firmware for the original Seeed XIAO nRF52840 Sense, publishing directly over
 Bluetooth as **Carl Foot Pod**. No computer or relay is needed after boot.
 
-Firmware version 0.2.0. Cadence detection and speed are placeholders. Zwift pairing
+Firmware version 0.2.1. Cadence detection and speed are placeholders. Zwift pairing
 and changing cadence have been confirmed by Carl. Battery life and battery-only
 power have not been tested here; collection control and data use Bluetooth only.
+
+## Read the battery voltage
+
+```sh
+rtk .venv/bin/python battery.py
+```
+
+This reads five measurements over Bluetooth and saves `validation/battery-report.json`.
+The board also includes `battery_mv`, `charging`, and `usb_power` in USB telemetry.
+Voltage is sampled once per second from AIN7 / P0.31, with the battery divider enabled
+by keeping P0.14 LOW. The 12-bit ADC uses the internal 3.0 V reference, a 40 µs sample
+time, and 4× oversampling. The schematic's 1 MΩ / 510 kΩ divider gives:
+`battery_mV = round(adc_count * 3000 / 4096 * 1510 / 510)`.
+This is an uncalibrated voltage reading, not a battery percentage or a current reading.
+The charger output on P0.17 is active LOW; USB power presence comes from VBUSDETECT.
+Charger-current settings are unchanged.
+
+The read-only characteristic `e85b0005-6d10-4a22-90c5-c813f72b1357` is in the existing
+collection service. Its six bytes are `<HHBB`: battery millivolts, raw ADC count,
+charger-active flag (0/1), and USB-present flag (0/1). The existing IMU data and
+status formats are unchanged. Voltage while USB is connected confirms that the
+battery input is readable; battery-only powering still needs a separate test.
 
 ## Record IMU data on battery
 
@@ -163,6 +185,7 @@ rtk .venv/bin/pip install -r requirements.txt
 ## References
 
 - [Seeed board documentation](https://wiki.seeedstudio.com/XIAO_BLE/)
+- [Seeed battery-divider schematic](https://files.seeedstudio.com/wiki/XIAO-BLE/Seeed_Studio_XIAO_nRF52840_PDF.pdf)
 - [Seeed IMU library (including the high-drive supply configuration)](https://github.com/Seeed-Studio/Seeed_Arduino_LSM6DS3/blob/master/LSM6DS3.cpp)
 - [ST LSM6DS3TR-C datasheet](https://www.st.com/resource/en/datasheet/lsm6ds3tr-c.pdf)
 - [Bluetooth Running Speed and Cadence service](https://www.bluetooth.com/specifications/specs/running-speed-and-cadence-service/)

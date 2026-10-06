@@ -9,6 +9,7 @@ constexpr uint8_t IMU_ADDRESS = 0x6A;
 constexpr float PEAK_G = 1.30f, REARM_G = 1.08f;
 constexpr uint32_t MIN_STRIDE_MS = 450, STOP_MS = 3000;
 constexpr float STEP_LENGTH_M = 0.70f; // Mock speed only; calibrate later.
+constexpr float BATTERY_DIVIDER = 1510.0f / 510.0f; // R16=1 MΩ, R17=510 kΩ.
 
 BLEService rsc(0x1814);
 BLECharacteristic measurement(0x2A53), feature(0x2A54), location(0x2A5D);
@@ -17,6 +18,9 @@ BLEService collection("e85b0001-6d10-4a22-90c5-c813f72b1357");
 BLECharacteristic imuData("e85b0002-6d10-4a22-90c5-c813f72b1357");
 BLECharacteristic collectionControl("e85b0003-6d10-4a22-90c5-c813f72b1357");
 BLECharacteristic collectionStatus("e85b0004-6d10-4a22-90c5-c813f72b1357");
+BLECharacteristic batteryVoltage("e85b0005-6d10-4a22-90c5-c813f72b1357");
+uint16_t batteryAdc = 0, batteryMv = 0;
+bool batteryCharging = false, usbPower = false;
 volatile bool collecting = false;
 uint32_t streamSent = 0, streamDropped = 0;
 bool imuReady = false, armed = true, haveStrike = false;
@@ -141,6 +145,17 @@ void collectionDisconnected(uint16_t, uint8_t) {
   collecting = false; // Battery boot and disconnect always return to cadence mode.
 }
 
+void readBattery() {
+  batteryAdc = analogRead(PIN_VBAT);
+  batteryMv = uint16_t(lroundf(batteryAdc * (3000.0f / 4096.0f) * BATTERY_DIVIDER));
+  batteryCharging = digitalRead(23) == LOW; // P0.17, active-low charger output.
+  usbPower = (NRF_POWER->USBREGSTATUS & POWER_USBREGSTATUS_VBUSDETECT_Msk) != 0;
+  uint8_t data[6] = {uint8_t(batteryMv), uint8_t(batteryMv >> 8),
+                    uint8_t(batteryAdc), uint8_t(batteryAdc >> 8),
+                    uint8_t(batteryCharging), uint8_t(usbPower)};
+  batteryVoltage.write(data, sizeof(data));
+}
+
 void sampleImu(uint32_t now) {
   uint8_t status, raw[12];
   if (!readRegisters(0x1E, &status, 1)) { ++imuErrors; return; }
@@ -205,12 +220,14 @@ void telemetry(uint32_t now) {
     "{\"ms\":%lu,\"mode\":\"%s\",\"imu_ok\":%s,\"who\":%u,\"samples\":%lu,"
     "\"imu_errors\":%lu,\"a_g\":[%.4f,%.4f,%.4f],\"gyro_dps\":[%.2f,%.2f,%.2f],"
     "\"strikes\":%lu,\"cadence_spm\":%u,\"connected\":%s,\"subscribed\":%s,"
-    "\"notifications\":%lu,\"notify_errors\":%lu}\n",
+    "\"notifications\":%lu,\"notify_errors\":%lu,\"battery_mv\":%u,"
+    "\"charging\":%s,\"usb_power\":%s}\n",
     (unsigned long)now, fixedCadence ? "mock" : "imu", imuReady ? "true" : "false",
     whoAmI, (unsigned long)samples, (unsigned long)imuErrors, ax, ay, az, gx, gy, gz,
     (unsigned long)strikes, cadence(now), Bluefruit.connected() ? "true" : "false",
     measurement.notifyEnabled() ? "true" : "false", (unsigned long)notifications,
-    (unsigned long)notifyErrors);
+    (unsigned long)notifyErrors, batteryMv, batteryCharging ? "true" : "false",
+    usbPower ? "true" : "false");
   logLength = length > 0 && length < int(sizeof(logBuffer)) ? length : 0;
   logOffset = 0;
 }
@@ -226,6 +243,12 @@ void flushTelemetry() {
 }
 
 void setup() {
+  // Keep the divider enabled (P0.14 LOW), including while USB charges the battery.
+  digitalWrite(VBAT_ENABLE, LOW); pinMode(VBAT_ENABLE, OUTPUT);
+  pinMode(PIN_VBAT, INPUT); pinMode(23, INPUT);
+  analogReadResolution(12); analogReference(AR_INTERNAL_3_0);
+  analogSampleTime(40); // Microseconds; high-impedance battery divider.
+  analogOversampling(4);
   Serial.begin(115200); // Never wait for USB: standalone battery operation.
   // 20-byte packets need no MTU negotiation; buffer short radio scheduling bursts.
   Bluefruit.configPrphConn(23, 6, 16, 1);
@@ -239,7 +262,7 @@ void setup() {
   Bluefruit.Periph.setDisconnectCallback(collectionDisconnected);
   deviceInfo.setManufacturer("Carl");
   deviceInfo.setModel("XIAO nRF52840 Sense");
-  deviceInfo.setSoftwareRev("0.2.0");
+  deviceInfo.setSoftwareRev("0.2.1");
   deviceInfo.begin();
   rsc.begin();
   measurement.setProperties(CHR_PROPS_NOTIFY);
@@ -265,6 +288,10 @@ void setup() {
   collectionStatus.setProperties(CHR_PROPS_READ);
   collectionStatus.setPermission(SECMODE_OPEN, SECMODE_NO_ACCESS);
   collectionStatus.setFixedLen(16); collectionStatus.begin();
+  batteryVoltage.setProperties(CHR_PROPS_READ);
+  batteryVoltage.setPermission(SECMODE_OPEN, SECMODE_NO_ACCESS);
+  batteryVoltage.setFixedLen(6); batteryVoltage.begin();
+  readBattery();
   updateCollectionStatus();
   Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
   Bluefruit.Advertising.addAppearance(0x0441); // Running/walking sensor, in shoe.
@@ -285,7 +312,7 @@ void loop() {
     sampleTimer = now; sampleImu(now);
   }
   if (uint32_t(now - publishTimer) >= 1000) {
-    publishTimer = now; if (!collecting) publish(now);
+    publishTimer = now; readBattery(); if (!collecting) publish(now);
   }
   if (uint32_t(now - logTimer) >= 200) {
     logTimer = now; telemetry(now); updateCollectionStatus();

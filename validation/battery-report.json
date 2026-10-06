@@ -1,0 +1,48 @@
+{
+  "checked_utc": "2026-10-06T04:31:09.731454+00:00",
+  "address": "FF:E3:4B:BE:98:B1",
+  "readings": [
+    {
+      "voltage_v": 3.938,
+      "adc_raw": 1816,
+      "charging": true,
+      "usb_power": true
+    },
+    {
+      "voltage_v": 3.942,
+      "adc_raw": 1818,
+      "charging": true,
+      "usb_power": true
+    },
+    {
+      "voltage_v": 3.947,
+      "adc_raw": 1820,
+      "charging": true,
+      "usb_power": true
+    },
+    {
+      "voltage_v": 3.942,
+      "adc_raw": 1818,
+      "charging": true,
+      "usb_power": true
+    },
+    {
+      "voltage_v": 3.936,
+      "adc_raw": 1815,
+      "charging": true,
+      "usb_power": true
+    }
+  ],
+  "firmware": "0.2.1",
+  "imu": {
+    "version": 1,
+    "imu_ok": true,
+    "collecting": false,
+    "subscribed": false,
+    "who_am_i": 106,
+    "sent": 0,
+    "dropped": 0,
+    "imu_errors": 0
+  },
+  "readable": true
+}
