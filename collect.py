@@ -37,7 +37,7 @@ def positive(value):
     return number
 
 
-async def record(args):
+async def record(args, on_sample=None, on_state=None, stop_event=None):
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S_%fZ")
     directory = ROOT / "recordings" / f"{stamp}_{args.label}"
     directory.mkdir(parents=True)
@@ -89,6 +89,11 @@ async def record(args):
                     last_seq, last_us = seq, device_us
                     metadata["samples"] += 1
                     metadata["clipped_samples"] += int(any(v in (-32768, 32767) for v in raw))
+                    if on_sample:
+                        on_sample(dict(sequence=seq, time_s=elapsed_us / 1_000_000,
+                                       gyro=[round(v * GYRO_DPS_PER_LSB, 6) for v in raw[:3]],
+                                       accel=[round(v * ACCEL_G_PER_LSB, 6) for v in raw[3:]],
+                                       missing=metadata["missing_packets"]))
                 except Exception as error:
                     stream_error = error
 
@@ -107,6 +112,13 @@ async def record(args):
                     raise RuntimeError(f"IMU is not ready: {initial}")
                 metadata["status_before"] = initial
                 try:
+                    if on_state:
+                        update = dict(phase="streaming", directory=str(directory), firmware=metadata["firmware"])
+                        battery_uuid = "e85b0005-6d10-4a22-90c5-c813f72b1357"
+                        if client.services.get_characteristic(battery_uuid):
+                            mv, adc, charge, usb = struct.unpack("<HHBB", await client.read_gatt_char(battery_uuid))
+                            update["battery"] = dict(voltage_v=mv / 1000, charging=bool(charge), usb_power=bool(usb))
+                        on_state(update)
                     await client.start_notify(DATA, receive)
                     await client.write_gatt_char(CONTROL, b"\x01", response=True)
                     last_received = started = time.monotonic()
@@ -116,6 +128,9 @@ async def record(args):
                     while time.monotonic() < deadline:
                         await asyncio.sleep(min(1, max(0, deadline - time.monotonic())))
                         handle.flush()
+                        if stop_event and stop_event.is_set():
+                            metadata["stopped_by_user"] = True
+                            break
                         if stream_error:
                             raise stream_error
                         if disconnected.is_set():
@@ -123,6 +138,9 @@ async def record(args):
                         if time.monotonic() - last_received > 3:
                             raise RuntimeError("No IMU packets for 3 seconds; partial capture saved")
                         ticks += 1
+                        if on_state:
+                            update = dict(samples=metadata["samples"], missing=metadata["missing_packets"])
+                            on_state(update)
                         if ticks % 5 == 0:
                             print(f"{metadata['samples']} samples; {metadata['missing_packets']} missing", flush=True)
                     if metadata["samples"] < 2:

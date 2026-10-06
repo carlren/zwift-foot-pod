@@ -7,6 +7,47 @@ Firmware version 0.2.1. Cadence detection and speed are placeholders. Zwift pair
 and changing cadence have been confirmed by Carl. Battery life and battery-only
 power have not been tested here; collection control and data use Bluetooth only.
 
+## Live visualization app
+
+```sh
+rtk .venv/bin/python dashboard.py
+```
+
+Open **http://127.0.0.1:8766** on this computer. Choose an activity label, duration,
+shoe side, and optional reference cadence, then click **Connect & record**. Disconnect
+the pod from Zwift first. **Stop & save** stops collection and releases the pod.
+The server uses Python's standard library and the existing BLE recorder; no new
+dependencies or firmware update are needed. It only listens on this computer.
+
+The dashboard shows all six IMU axes, acceleration magnitude, foot-strike markers,
+estimated total steps/min, optional reference cadence, sample rate and packet gaps.
+The shoe animation and normalized curve illustrate the **estimated one-foot rhythm**,
+not reconstructed foot position. Battery voltage and charger status are read at
+connection time; they are not continuously refreshed during the high-rate stream.
+
+The fit is explicitly the current **threshold prototype**, matching the firmware's
+1.30 g detection, 1.08 g rearm, minimum stride interval and cadence smoothing.
+It is not a trained or validated gait algorithm. The live detector settings can be
+tuned while recording; changes reset the detector and apply to subsequent samples.
+The displayed history retains the fit that was calculated at each sample's time.
+Replace `Detector.update()` in `dashboard.py` as the real algorithm is developed.
+
+All raw samples remain in `imu.csv` and `session.json`. The dashboard also saves
+`fit.csv` with every sample's acceleration magnitude, foot-strike decision, cadence,
+phase, and detector settings, plus `fit-settings.json` with configuration changes.
+Download the raw data, fit, and session details through the links in the app.
+The display shows the latest 20 seconds, updating five times per second; recording
+keeps every received sample. If the connection fails, partial files are retained
+and the app reports the error. Click **Connect & record** to start a new session.
+
+```sh
+rtk .venv/bin/python test_dashboard.py
+```
+
+This verifies cadence on synthetic 109/180 spm signals, the stop timeout, extra-strike
+rejection, request validation, live snapshots and fit CSV output. The browser and
+real-pod integration check is recorded in `validation/dashboard-report.json`.
+
 ## Read the battery voltage
 
 ```sh
