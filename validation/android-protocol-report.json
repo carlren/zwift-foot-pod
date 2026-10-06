@@ -1,0 +1,36 @@
+{
+  "result": "PASS",
+  "host_checks": "Decoder validation, unsigned clocks/sequence, recording boundaries/countdown, reference, synthetic cadence and stop",
+  "recordings": [
+    {
+      "recording": "20261006T052553_045206Z_walking",
+      "reference_spm": 70.5,
+      "mean_android_spm": 70.66,
+      "max_fit_difference": 0.004841308999999683
+    },
+    {
+      "recording": "20261006T052707_444318Z_walking",
+      "reference_spm": 71.0,
+      "mean_android_spm": 70.4,
+      "max_fit_difference": 0.004974364999995373
+    },
+    {
+      "recording": "20261006T052902_519778Z_walking",
+      "reference_spm": 92.0,
+      "mean_android_spm": 92.06,
+      "max_fit_difference": 0.0049908449999946924
+    },
+    {
+      "recording": "20261006T053044_112366Z_walking",
+      "reference_spm": 92.0,
+      "mean_android_spm": 92.18,
+      "max_fit_difference": 0.004952697999996758
+    },
+    {
+      "recording": "20261006T053216_845529Z_walking",
+      "reference_spm": 110.0,
+      "mean_android_spm": 109.98,
+      "max_fit_difference": 0.004783935999995492
+    }
+  ]
+}

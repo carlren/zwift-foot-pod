@@ -1,0 +1,54 @@
+{
+  "result": "PASS",
+  "checked_utc": "2026-10-06T16:17:05.540181+00:00",
+  "version": "1.0.0",
+  "package": "com.carlren.footpod",
+  "apk_sha256": "9518e85ef432892e300549d6526216e016b5c31c60be1b8bfe7575cf760f6112",
+  "apk_bytes": 78952,
+  "signed_apk_verified": true,
+  "min_android_api": 31,
+  "target_android_api": 35,
+  "emulator": "Android 15 / API 35 x86_64",
+  "installation_and_launch": "PASS",
+  "native_storage_checks": "PASS: CSV, fit, metadata, reference edit, ZIP, read-only provider, path traversal rejection, partial/interrupted recovery",
+  "android_runtime_permissions": "PASS: Nearby devices and notifications prompted and granted in emulator",
+  "lint_errors": 0,
+  "lint_warnings": [
+    {
+      "id": "SetTextI18n",
+      "message": "String literal in `setText` can not be translated. Use Android resources instead."
+    },
+    {
+      "id": "SetTextI18n",
+      "message": "String literal in `setText` can not be translated. Use Android resources instead."
+    },
+    {
+      "id": "SetTextI18n",
+      "message": "Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+    },
+    {
+      "id": "SetTextI18n",
+      "message": "String literal in `setText` can not be translated. Use Android resources instead."
+    },
+    {
+      "id": "SetTextI18n",
+      "message": "String literal in `setText` can not be translated. Use Android resources instead."
+    },
+    {
+      "id": "SetTextI18n",
+      "message": "String literal in `setText` can not be translated. Use Android resources instead."
+    }
+  ],
+  "phone_radio_test": "Pending installation on Galaxy S26 Ultra",
+  "two_physical_central_test": "Pending phone + Zwift on another device",
+  "screen_lock_recording_on_galaxy": "Not yet tested",
+  "google_drive": {
+    "id": "1nzFJdNqu-e4rJ_Pa3qmB6X4gVdH134VP",
+    "url": "https://drive.google.com/file/d/1nzFJdNqu-e4rJ_Pa3qmB6X4gVdH134VP/view?usp=drivesdk",
+    "name": "Foot-Pod-Lab-1.0.0.apk",
+    "mime_type": "application/vnd.android.package-archive",
+    "size_bytes": 78952,
+    "metadata_readback_verified": true
+  },
+  "final_release_ui_state": "PASS: Record disabled before samples; file-free preview instructions; no AndroidRuntime crash"
+}

@@ -3,3 +3,7 @@ tools/
 build/
 __pycache__/
 recordings/
+.gradle/
+local.properties
+android/dist/
+*.jks

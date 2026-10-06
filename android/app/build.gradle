@@ -1,0 +1,28 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.carlren.footpod'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.carlren.footpod'
+        minSdk 31
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+        testInstrumentationRunner 'com.carlren.footpod.TestProbe'
+    }
+    signingConfigs {
+        personal {
+            if (System.getenv('FOOT_POD_KEYSTORE')) {
+                storeFile file(System.getenv('FOOT_POD_KEYSTORE'))
+                storePassword System.getenv('FOOT_POD_KEY_PASSWORD')
+                keyAlias 'footpod'
+                keyPassword System.getenv('FOOT_POD_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes { release { signingConfig signingConfigs.personal } }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

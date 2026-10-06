@@ -1,5 +1,10 @@
 # Carl Foot Pod — cadence and Bluetooth IMU collection
 
+The **Foot Pod Lab Android companion** is in [`android/`](android/README.md):
+live Bluetooth preview, separate recording, countdown, gyro fitting, voltage /
+estimated percentage, and session ZIP sharing. It works alongside Zwift on a
+separate device with firmware 0.4.0.
+
 Firmware for the original Seeed XIAO nRF52840 Sense, publishing directly over
 Bluetooth as **Carl Foot Pod**. No computer or relay is needed after boot.
 
