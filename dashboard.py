@@ -13,7 +13,7 @@ import time
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlsplit
 
-from collect import record
+from collect import Recording, stream
 
 ROOT = Path(__file__).resolve().parent
 
@@ -80,96 +80,133 @@ class Dashboard:
         self.history = deque(maxlen=5000)
         self.config = settings({})
         self.detector = Detector(**self.config)
-        self.state = dict(phase="idle", samples=0, missing=0, cadence=0, strikes=0, run_id=0,
-                          config=self.config, error=None, directory=None, reference_spm=None)
-        self.task = None
-        self.stop_event = None
+        self.state = dict(phase='idle', samples=0, missing=0, cadence=0, strikes=0, run_id=time.time_ns()//1000,
+                          config=self.config, error=None, directory=None, reference_spm=None,
+                          recording=False, recorded_samples=0, recorded_seconds=0)
+        self.task = self.stop_event = None
+        self.recording = None
+        self.connection = {}
         self.fit_handle = self.fit_writer = None
         self.fit_changes = []
         self.index = 0
+        self.deadline = None
 
     def snapshot(self, since):
         with self.lock:
             state = dict(self.state)
-            state["points"] = [p for p in self.history if p["index"] > since]
-            state["cursor"] = self.index
-            state["age_s"] = round(time.monotonic() - self.state.get("last_received", time.monotonic()), 2)
+            state['points'] = [p for p in self.history if p['index']>since]
+            state['cursor'] = self.index
+            state['age_s'] = round(time.monotonic()-self.state.get('last_received',time.monotonic()),2)
             return state
 
     def update(self, values):
         with self.lock:
             self.state.update(values)
-            if values.get("phase") == "streaming":
-                directory = Path(values["directory"])
-                self.fit_handle = (directory / "fit.csv").open("x", newline="")
-                self.fit_writer = csv.writer(self.fit_handle)
-                self.fit_writer.writerow(["sequence", "time_s", "magnitude_g", "foot_strike", "cadence_spm", "phase", "peak_g", "rearm_g", "min_stride_ms"])
-            if self.fit_handle:
-                self.fit_handle.flush()
+            self.connection.update(values)
+
+    def finish_recording(self, error=None, stopped_by_user=False):
+        # Caller holds the lock. Keep the Bluetooth stream and detector running.
+        if not self.recording:
+            return
+        saved = self.recording
+        report = saved.finish(error,stopped_by_user,self.connection)
+        self.fit_handle.close()
+        (saved.directory/'fit-settings.json').write_text(json.dumps(
+            dict(algorithm='firmware-threshold-prototype',changes=self.fit_changes),indent=2)+'\n')
+        self.recording = self.fit_handle = self.fit_writer = None
+        self.deadline = None
+        self.state.update(recording=False,report=report,recorded_samples=report['samples'],
+                          recorded_seconds=report['device_duration_s'])
+        if self.state['phase']=='recording':
+            self.state['phase']='preview'
 
     def sample(self, point):
         with self.lock:
             fit = self.detector.update(point)
             self.index += 1
-            point.update(fit, index=self.index)
+            point.update(fit,index=self.index)
             self.history.append(point)
-            self.state.update(cadence=fit["cadence"], strikes=fit["strikes"], samples=self.state["samples"]+1,
-                              missing=point["missing"], last_received=time.monotonic(), latest=point)
-            if self.fit_writer:
-                self.fit_writer.writerow([point["sequence"], point["time_s"], fit["magnitude"], int(fit["strike"]), fit["cadence"], fit["phase"], self.config["peak"], self.config["rearm"], self.config["min_stride_ms"]])
+            self.state.update(cadence=fit['cadence'],strikes=fit['strikes'],samples=self.state['samples']+1,
+                              missing=point['missing'],last_received=time.monotonic(),latest=point)
+            if self.recording and time.monotonic()>=self.deadline:
+                self.finish_recording()
+            if self.recording:
+                relative = self.recording.append(point)
+                self.fit_writer.writerow([point['sequence'],relative,fit['magnitude'],int(fit['strike']),
+                    fit['cadence'],fit['phase'],self.config['peak'],self.config['rearm'],self.config['min_stride_ms']])
+                count = self.recording.metadata['samples']
+                self.state.update(recorded_samples=count,recorded_seconds=relative)
+                if count%100==0:
+                    self.recording.flush();self.fit_handle.flush()
 
-    async def capture(self, args):
+    async def preview(self):
+        failure = None
         try:
-            directory, report = await record(args, on_sample=self.sample, on_state=self.update, stop_event=self.stop_event)
-            self.update(dict(phase="stopped", report=report, directory=str(directory), cadence=0))
+            connection = await stream(self.sample,self.update,self.stop_event)
+            self.connection.update(connection)
         except asyncio.CancelledError:
-            self.update(dict(phase="stopped", cadence=0))
             raise
         except Exception as error:
-            self.update(dict(phase="error", error=str(error), cadence=0))
+            failure = error
+            self.update(dict(phase='error',error=str(error),cadence=0))
         finally:
             with self.lock:
-                if self.fit_handle:
-                    self.fit_handle.close()
-                    directory = Path(self.state["directory"])
-                    (directory / "fit-settings.json").write_text(json.dumps(dict(algorithm="firmware-threshold-prototype", changes=self.fit_changes), indent=2)+"\n")
-                self.fit_handle = self.fit_writer = None
+                self.finish_recording(failure,stopped_by_user=failure is None)
+                if self.state['phase']!='error':
+                    self.state.update(phase='disconnected',cadence=0)
 
     async def command(self, action, data):
-        if action == "start":
-            args = recording_args(data)
+        if action=='connect':
             if self.task and not self.task.done():
-                raise ValueError("A recording is already running")
+                raise ValueError('The pod is already connected')
             with self.lock:
                 self.history.clear()
                 self.detector = Detector(**self.config)
-                self.state.update(phase="connecting", run_id=self.state["run_id"]+1, samples=0, missing=0,
-                                  cadence=0, strikes=0, error=None, directory=None, latest=None, battery=None,
-                                  reference_spm=args.reference_spm, label=args.label, seconds=args.seconds)
-                self.fit_changes = [dict(time_s=0, **self.config)]
+                self.connection = {}
+                self.state.update(phase='connecting',run_id=self.state['run_id']+1,samples=0,missing=0,
+                    cadence=0,strikes=0,error=None,latest=None,battery=None,recording=False,
+                    reference_spm=None)
             self.stop_event = asyncio.Event()
-            self.task = asyncio.create_task(self.capture(args))
-        elif action == "stop":
+            self.task = asyncio.create_task(self.preview())
+        elif action=='record':
+            args = recording_args(data)
+            with self.lock:
+                if self.state['phase']!='preview' or not self.task or self.task.done() or not self.state['samples']:
+                    raise ValueError('Connect and wait for live samples before recording')
+                self.recording = Recording(args,self.connection)
+                self.fit_handle = (self.recording.directory/'fit.csv').open('x',newline='')
+                self.fit_writer = csv.writer(self.fit_handle)
+                self.fit_writer.writerow(['sequence','time_s','magnitude_g','foot_strike','cadence_spm',
+                                         'phase','peak_g','rearm_g','min_stride_ms'])
+                self.fit_changes = [dict(time_s=0,**self.config)]
+                self.deadline = time.monotonic()+args.seconds
+                self.state.update(phase='recording',recording=True,directory=str(self.recording.directory),
+                    recorded_samples=0,recorded_seconds=0,report=None,reference_spm=args.reference_spm,
+                    label=args.label,seconds=args.seconds,foot=args.foot)
+        elif action=='stop':
+            with self.lock:
+                self.finish_recording(stopped_by_user=True)
+        elif action=='disconnect':
             if self.task and not self.task.done():
-                if self.state["phase"] == "connecting":
+                if self.state['phase']=='connecting':
                     self.task.cancel()
                 self.stop_event.set()
-                self.update(dict(phase="stopping"))
+                self.update(dict(phase='disconnecting'))
                 try:
-                    await asyncio.wait_for(asyncio.shield(self.task), 25)
+                    await asyncio.wait_for(asyncio.shield(self.task),25)
                 except asyncio.CancelledError:
-                    self.update(dict(phase="stopped", cadence=0))
-        elif action == "tune":
+                    self.update(dict(phase='disconnected',cadence=0))
+        elif action=='tune':
             config = settings(data)
             with self.lock:
                 self.config = config
                 self.detector = Detector(**config)
-                self.state["config"] = config
-                t = self.state.get("latest") or {}
-                self.fit_changes.append(dict(time_s=t.get("time_s", 0), **config))
+                self.state['config'] = config
+                if self.recording:
+                    self.fit_changes.append(dict(time_s=self.state['recorded_seconds'],**config))
         else:
-            raise ValueError("Unknown command")
-        return {"ok": True}
+            raise ValueError('Unknown command')
+        return {'ok':True}
 
 
 def handler(app):
@@ -223,7 +260,7 @@ def handler(app):
                 if not isinstance(data, dict):
                     raise ValueError("Expected a JSON object")
                 action = self.path.removeprefix("/api/")
-                if self.path != "/api/" + action or action not in ("start", "stop", "tune"):
+                if self.path != "/api/" + action or action not in ("connect", "record", "stop", "disconnect", "tune"):
                     raise ValueError("Unknown command")
                 future = asyncio.run_coroutine_threadsafe(app.command(action, data), app.loop)
                 self.send(200, future.result(timeout=30))
@@ -244,11 +281,7 @@ async def main(port):
         await asyncio.Event().wait()
     finally:
         if app.task and not app.task.done():
-            app.stop_event.set()
-            try:
-                await asyncio.wait_for(asyncio.shield(app.task), 25)
-            except (asyncio.TimeoutError, asyncio.CancelledError):
-                app.task.cancel()
+            await app.command('disconnect',{})
         server.shutdown()
         server.server_close()
 

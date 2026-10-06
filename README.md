@@ -13,9 +13,14 @@ power have not been tested here; collection control and data use Bluetooth only.
 rtk .venv/bin/python dashboard.py
 ```
 
-Open **http://127.0.0.1:8766** on this computer. Choose an activity label, duration,
-shoe side, and optional reference cadence, then click **Connect & record**. Disconnect
-the pod from Zwift first. **Stop & save** stops collection and releases the pod.
+Open **http://127.0.0.1:8766** on this computer. Click **Connect** to see a live
+preview immediately. Preview creates no recording files. When the samples look
+right, choose an activity label, duration, shoe side and optional reference cadence,
+then click **Record**. Only newly received samples are saved, with session timestamps
+starting at zero. **Stop recording**, or the duration timer, saves the session and
+keeps the live preview running. You can record another session on the same Bluetooth
+connection. **Disconnect** releases the pod and saves any active recording first.
+Disconnect the pod from Zwift before connecting here.
 The server uses Python's standard library and the existing BLE recorder; no new
 dependencies or firmware update are needed. It only listens on this computer.
 
@@ -38,14 +43,15 @@ phase, and detector settings, plus `fit-settings.json` with configuration change
 Download the raw data, fit, and session details through the links in the app.
 The display shows the latest 20 seconds, updating five times per second; recording
 keeps every received sample. If the connection fails, partial files are retained
-and the app reports the error. Click **Connect & record** to start a new session.
+and the app reports the error. Click **Connect** to reconnect and preview, then **Record** when ready.
 
 ```sh
 rtk .venv/bin/python test_dashboard.py
 ```
 
 This verifies cadence on synthetic 109/180 spm signals, the stop timeout, extra-strike
-rejection, request validation, live snapshots and fit CSV output. The browser and
+rejection, request validation, timestamp wrapping, file-free preview, recording
+boundaries, live snapshots, repeat recording and fit CSV output. The browser and
 real-pod integration check is recorded in `validation/dashboard-report.json`.
 
 ## Read the battery voltage
