@@ -3,7 +3,8 @@
 Firmware for the original Seeed XIAO nRF52840 Sense, publishing directly over
 Bluetooth as **Carl Foot Pod**. No computer or relay is needed after boot.
 
-Firmware version 0.3.0. Cadence uses the validated signed Y-gyro detector; speed remains a placeholder. Zwift pairing
+Firmware version 0.4.0: two simultaneous Bluetooth centrals, concurrent Zwift cadence
+and companion IMU collection, voltage and estimated battery percentage. Cadence uses the validated signed Y-gyro detector; speed remains a placeholder. Zwift pairing
 and changing cadence have been confirmed by Carl. Battery life and battery-only
 power have not been tested here; collection control and data use Bluetooth only.
 
@@ -20,7 +21,9 @@ then click **Record**. Only newly received samples are saved, with session times
 starting at zero. **Stop recording**, or the duration timer, saves the session and
 keeps the live preview running. You can record another session on the same Bluetooth
 connection. **Disconnect** releases the pod and saves any active recording first.
-Disconnect the pod from Zwift before connecting here.
+Firmware 0.4.0 allows Zwift on another device to stay connected while you preview or record here.
+Two apps on the same operating system may share a single physical BLE connection;
+use a separate phone or computer for independent companion controls.
 
 The recording timer shows a large countdown, elapsed seconds and a progress bar.
 Click **Use 60 seconds** for a one-minute manual cadence count. Count steps from
@@ -38,7 +41,7 @@ dependencies or firmware update are needed. It only listens on this computer.
 The dashboard shows all six IMU axes, filtered gyro rotation, stride-cycle markers,
 estimated total steps/min, optional reference cadence, sample rate and packet gaps.
 The shoe animation and normalized curve illustrate the **estimated one-foot rhythm**,
-not reconstructed foot position. Battery voltage and charger status are read at
+not reconstructed foot position. Battery voltage, estimated percentage and charger status are read at
 connection time; they are not continuously refreshed during the high-rate stream.
 
 The dashboard fit is a **signed gyroscope cycle prototype**. Y rotation is the
@@ -90,13 +93,14 @@ speed text is preserved when the unit is uncertain.
 
 ## Standalone Zwift use
 
-Firmware 0.3.0 computes cadence on the board from signed Y-axis rotation. On battery
+Firmware 0.4.0 computes cadence on the board from signed Y-axis rotation. On battery
 power, no computer or dashboard is required. In Zwift **RUN → CADENCE**, select
 **Carl Foot Pod**, keeping your existing treadmill / speed source under **RUN SPEED**.
 Keep the pod mounted in the same case orientation used for the reference recordings.
 Allow a few seconds of walking for the first cadence estimate. Zero-cadence
-heartbeats continue while standing still. Disconnect the dashboard / recorder before
-pairing Zwift, since the board supports one Bluetooth client at a time.
+heartbeats continue while standing still. Zwift and a companion can connect together: two physical Bluetooth clients are
+supported, with independent subscriptions and capture controls. Recording never
+pauses the cadence heartbeat; stopping or disconnecting the companion leaves Zwift connected.
 
 The exact C++ code used on the board is also compiled and replayed on the computer:
 
@@ -111,19 +115,24 @@ against the dashboard on the saved walking sessions. Evidence is in
 remain available. `mock` commands are temporary transport tests; boot defaults to
 actual gyro cadence.
 
-## Read the battery voltage
+## Read battery voltage and estimated percentage
 
 ```sh
 rtk .venv/bin/python battery.py
 ```
 
 This reads five measurements over Bluetooth and saves `validation/battery-report.json`.
-The board also includes `battery_mv`, `charging`, and `usb_power` in USB telemetry.
+The board also includes `battery_mv`, `battery_pct`, `charging`, and `usb_power` in USB telemetry.
 Voltage is sampled once per second from AIN7 / P0.31, with the battery divider enabled
 by keeping P0.14 LOW. The 12-bit ADC uses the internal 3.0 V reference, a 40 µs sample
 time, and 4× oversampling. The schematic's 1 MΩ / 510 kΩ divider gives:
 `battery_mV = round(adc_count * 3000 / 4096 * 1510 / 510)`.
-This is an uncalibrated voltage reading, not a battery percentage or a current reading.
+Voltage is uncalibrated. Percentage is a piecewise interpolation of a typical LiPo
+open-circuit curve (Zephyr's default, based on Analog Devices AN4189 Table 1).
+It clamps to 0–100%; it is an estimate, particularly under charge or load, not a
+fuel-gauge measurement. The curve can be calibrated in `footpod/companion.h`.
+Standard Battery Service `180F` / Battery Level `2A19` exposes one unsigned byte
+(0–100), readable at any time and notified when the percentage changes.
 The charger output on P0.17 is active LOW; USB power presence comes from VBUSDETECT.
 Charger-current settings are unchanged.
 
@@ -136,9 +145,9 @@ battery input is readable; battery-only powering still needs a separate test.
 ## Record IMU data on battery
 
 The board boots in normal cadence mode. The computer's recorder starts and stops
-collection over Bluetooth, with no USB commands needed. Collection temporarily
-pauses RSC publishing; finishing or disconnecting returns the pod to cadence mode.
-Only one Bluetooth client can connect: disconnect the pod from Zwift before recording.
+collection over Bluetooth, with no USB commands needed. RSC publishing continues
+during collection. Both clients can subscribe to cadence, and either can independently
+start or stop its own raw IMU stream. Disconnect clears only that client’s capture state.
 Keep this computer within Bluetooth range of the shoe.
 
 From a terminal on this computer:
@@ -180,7 +189,8 @@ Both counters are unsigned 32-bit and wrap. Scale factors remain 0.035 degrees/s
 and 0.000244 g per count. Write byte `01` to control to start, `00` to stop; subscribe
 to data first. The 16-byte status is `<BBBBIII`: version=1, flags (IMU ready=1,
 collection enabled=2, data subscribed=4), sensor identity, reserved=0, cumulative
-sent packets, rejected packets, and sensor read errors.
+sent packets, rejected packets, and sensor read errors. Capture flags and sent /
+rejected counts are per connection, reset on reconnect; sensor read errors are global.
 
 ```sh
 rtk .venv/bin/python validate_collection.py # 20-second Bluetooth-only hardware check
@@ -189,6 +199,32 @@ rtk .venv/bin/python validate_collection.py # 20-second Bluetooth-only hardware 
 This also verifies CSV output and return to cadence mode after disconnect/reconnect.
 Evidence is saved to `validation/collection-report.json`. USB can provide power for
 the bench check; the collector never opens the USB serial port.
+
+## Companion phone protocol and validation
+
+A BLE app can connect as the second central while Zwift receives cadence. Read
+Battery Level `2A19` for the estimated percent and custom characteristic `0005`
+for millivolts and charger / USB flags. For raw IMU recording, subscribe to `0002`,
+then write **hex byte** `01` (not ASCII “01”) with response to `0003`. Write `00`
+to stop. Subscribe / preview and saving to files are separate app responsibilities.
+The firmware sends timestamped packets; the phone app must decode and save them.
+No on-board recording storage or new mobile application is included in this change.
+Controls do not change the shared cadence algorithm, and read/write access is open
+without pairing. Disconnect the companion when finished to free its slot.
+
+```sh
+rtk .venv/bin/python test_companion.py      # actual C++ client state + battery curve
+rtk .venv/bin/python validate_companion.py  # actual BLE concurrency, battery reads, advertising
+```
+
+The hardware check uses one physical central subscribed to both RSC and IMU,
+reads battery / status during capture, checks cadence gaps, confirms advertising
+while connected, and checks stop and reconnect. The 0.4.0 bench run received 2,093 IMU samples at 104.995 Hz with zero missing
+packets while receiving 20 cadence frames; the maximum cadence gap was 1.077 s.
+It read voltage and percentage five times during capture and received 16 battery
+notifications. No I²C errors occurred. Its report explicitly records
+that two separate radio links require a separate phone test. It does not simulate
+a second physical central using two clients on the same Bluetooth adapter.
 
 ## Current behavior
 
@@ -203,9 +239,9 @@ the bench check; the collector never opens the USB serial port.
   It was checked against five one-minute walking recordings at the three reported
   paces. Cadence starts after two detected cycles and returns to zero after stopping.
   Broader gait / mounting validation is still limited to the current shoe setup.
-- In cadence mode, publishes a four-byte Running Speed and Cadence measurement once per second,
+- Publishes a four-byte Running Speed and Cadence measurement once per second,
   including zero cadence while idle. It advertises continuously and automatically
-  advertises again after disconnection. One Bluetooth client is supported at a time.
+  advertises again after disconnection. Two Bluetooth clients are supported at a time; it keeps advertising while a slot is free.
 - Starts without waiting for a USB serial connection. USB prints JSON telemetry at
   5 Hz while a serial host is connected and reading. A stalled reader can lose
   telemetry updates but cannot pause the IMU or Bluetooth. The red LED indicates
@@ -219,7 +255,9 @@ the bench check; the collector never opens the USB serial port.
 | RSC Measurement (notify + CCCD) | `2A53` |
 | RSC Feature (read) | `2A54`, value `0000` (no optional features) |
 | Sensor Location (read) | `2A5D`, value `06` (left foot) |
-| Device information | `180A` |
+| Device information | `180A`, software revision `0.4.0` |
+| Battery level (read + notify) | `180F` / `2A19`, estimated percentage 0–100 |
+| Battery diagnostics (read) | `e85b0005-6d10-4a22-90c5-c813f72b1357`, `<HHBB` |
 | Appearance | `0441` (running/walking sensor in shoe) |
 
 Measurement: `[flags=0, speed_low, speed_high, cadence_spm]`.
@@ -297,3 +335,5 @@ rtk .venv/bin/pip install -r requirements.txt
 - [Bluetooth Running Speed and Cadence service](https://www.bluetooth.com/specifications/specs/running-speed-and-cadence-service/)
 - [Zwift running device pairing](https://support.zwift.com/de/-ry2NdSw9B)
 - [Bleak Bluetooth client API](https://bleak.readthedocs.io/en/latest/api/client.html)
+
+- [Zephyr typical LiPo voltage curve](https://github.com/zephyrproject-rtos/zephyr/blob/main/include/zephyr/dt-bindings/battery/battery.h)

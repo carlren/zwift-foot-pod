@@ -1,0 +1,57 @@
+{
+  "checked_utc": "2026-10-06T13:59:46.872382+00:00",
+  "result": "PASS",
+  "physical_centrals": 1,
+  "two_device_test": "Not performed: needs a separate phone",
+  "firmware": "0.4.0",
+  "samples": 2093,
+  "received_hz": 104.995,
+  "missing": 0,
+  "status_after": {
+    "version": 1,
+    "imu_ok": true,
+    "collecting": false,
+    "subscribed": false,
+    "who_am_i": 106,
+    "sent": 2093,
+    "dropped": 0,
+    "imu_errors": 0
+  },
+  "battery_readings": [
+    {
+      "millivolts": 4166,
+      "percent": 99,
+      "charging": false,
+      "usb_power": true
+    },
+    {
+      "millivolts": 4174,
+      "percent": 100,
+      "charging": false,
+      "usb_power": true
+    },
+    {
+      "millivolts": 4168,
+      "percent": 99,
+      "charging": false,
+      "usb_power": true
+    },
+    {
+      "millivolts": 4174,
+      "percent": 100,
+      "charging": false,
+      "usb_power": true
+    },
+    {
+      "millivolts": 4168,
+      "percent": 99,
+      "charging": false,
+      "usb_power": true
+    }
+  ],
+  "concurrent_cadence_frames": 20,
+  "max_cadence_gap_s": 1.077,
+  "battery_notifications": 16,
+  "advertising_while_connected": true,
+  "reconnect_collection_reset": true
+}

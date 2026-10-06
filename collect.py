@@ -142,7 +142,7 @@ async def stream(on_sample, on_state=None, stop_event=None, seconds=None):
     device = await BleakScanner.find_device_by_filter(
         lambda d,a:a.local_name=='Carl Foot Pod' and SERVICE in a.service_uuids, timeout=15)
     if device is None:
-        raise RuntimeError('Pod not found. Power it on and disconnect it from Zwift first.')
+        raise RuntimeError('Pod not found. Power it on and check that a Bluetooth connection slot is free.')
     connection['address'] = device.address
     async with BleakClient(device,disconnected_callback=lambda _:disconnected.set()) as client:
         connection['firmware'] = bytes(await client.read_gatt_char('00002a28-0000-1000-8000-00805f9b34fb')).decode()
@@ -154,6 +154,12 @@ async def stream(on_sample, on_state=None, stop_event=None, seconds=None):
         if client.services.get_characteristic(battery_uuid):
             mv,adc,charge,usb = struct.unpack('<HHBB',await client.read_gatt_char(battery_uuid))
             connection['battery'] = dict(voltage_v=mv/1000,charging=bool(charge),usb_power=bool(usb))
+            level_uuid = '00002a19-0000-1000-8000-00805f9b34fb'
+            if client.services.get_characteristic(level_uuid):
+                level = bytes(await client.read_gatt_char(level_uuid))
+                if len(level) != 1 or level[0] > 100:
+                    raise ValueError('Invalid Bluetooth battery percentage')
+                connection['battery'].update(percent=level[0], percent_estimated=True)
         if on_state:
             on_state(dict(phase='preview',**connection))
         try:

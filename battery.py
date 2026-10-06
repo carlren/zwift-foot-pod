@@ -1,4 +1,4 @@
-"""Read battery voltage, ADC count, charger state, and USB power over Bluetooth."""
+"""Read voltage, estimated percentage, charger state, and USB power over Bluetooth."""
 import asyncio
 from datetime import datetime, timezone
 import json
@@ -27,6 +27,9 @@ async def main():
             assert adc <= 4095 and charging in (0, 1) and usb in (0, 1)
             assert abs(mv - round(adc * 3000 / 4096 * 1510 / 510)) <= 1
             row = dict(voltage_v=mv / 1000, adc_raw=adc, charging=bool(charging), usb_power=bool(usb))
+            level = bytes(await client.read_gatt_char('00002a19-0000-1000-8000-00805f9b34fb'))
+            assert len(level) == 1 and level[0] <= 100
+            row.update(percent=level[0], percent_estimated=True)
             report["readings"].append(row)
             print(json.dumps(row), flush=True)
             if index < 4:

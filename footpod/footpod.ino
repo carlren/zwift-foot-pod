@@ -4,6 +4,7 @@
 #include <hal/nrf_gpio.h>
 #include <math.h>
 #include "cadence.h"
+#include "companion.h"
 
 // Seeed nRF52 Boards 1.1.13; XIAO nRF52840 Sense (original, not Plus).
 constexpr uint8_t IMU_ADDRESS = 0x6A;
@@ -20,8 +21,11 @@ BLECharacteristic collectionStatus("e85b0004-6d10-4a22-90c5-c813f72b1357");
 BLECharacteristic batteryVoltage("e85b0005-6d10-4a22-90c5-c813f72b1357");
 uint16_t batteryAdc = 0, batteryMv = 0;
 bool batteryCharging = false, usbPower = false;
-volatile bool collecting = false;
-uint32_t streamSent = 0, streamDropped = 0;
+BLEService batteryService(0x180F);
+BLECharacteristic batteryLevel(0x2A19);
+uint8_t batteryPct = 0;
+PodClients clients;
+uint8_t cadencePacket[4] = {};
 bool imuReady = false;
 GyroCadence gyroCadence;
 uint8_t whoAmI = 0, fixedCadence = 0;
@@ -31,7 +35,7 @@ float ax = 0, ay = 0, az = 0, gx = 0, gy = 0, gz = 0;
 char command[40];
 uint8_t commandLength = 0;
 bool commandOverflow = false;
-char logBuffer[384];
+char logBuffer[512];
 uint16_t logLength = 0, logOffset = 0;
 const nrfx_twim_t imuBus = NRFX_TWIM_INSTANCE(1);
 volatile bool transferDone = false, transferOk = false;
@@ -95,40 +99,52 @@ void writeWord(uint8_t* out, uint32_t value) {
   for (uint8_t i = 0; i < 4; ++i) out[i] = uint8_t(value >> (8 * i));
 }
 
+// Native HVX is nonblocking. A busy phone queue never stalls sensor sampling
+// or the separate Zwift connection. All notification paths use the same API.
+uint32_t notify(uint16_t handle, BLECharacteristic& characteristic,
+                const uint8_t* data, uint16_t length) {
+  ble_gatts_hvx_params_t request = {};
+  request.handle = characteristic.handles().value_handle;
+  request.type = BLE_GATT_HVX_NOTIFICATION;
+  request.p_len = &length; request.p_data = data;
+  return sd_ble_gatts_hvx(handle, &request);
+}
+
 void streamImu(const uint8_t* raw, uint32_t sample_us) {
-  if (!collecting || !imuData.notifyEnabled()) return;
-  // Exactly 20 bytes fits the minimum BLE MTU: seq, acquisition us, gyro XYZ, accel XYZ.
   uint8_t packet[20];
   writeWord(packet, samples); writeWord(packet + 4, sample_us);
   memcpy(packet + 8, raw, 12);
-  uint16_t length = sizeof(packet);
-  ble_gatts_hvx_params_t request = {};
-  request.handle = imuData.handles().value_handle;
-  request.type = BLE_GATT_HVX_NOTIFICATION;
-  request.p_len = &length; request.p_data = packet;
-  // Bluefruit notify() can wait for queue space. Native HVX returns immediately;
-  // keep acquiring the IMU even if radio congestion drops a packet.
-  if (sd_ble_gatts_hvx(Bluefruit.connHandle(), &request) == NRF_SUCCESS) ++streamSent;
-  else ++streamDropped;
+  for (auto& peer : clients.slots) {
+    if (peer.handle == 0xffff || !peer.collecting || !imuData.notifyEnabled(peer.handle)) continue;
+    if (notify(peer.handle, imuData, packet, sizeof(packet)) == NRF_SUCCESS) ++peer.sent;
+    else ++peer.dropped;
+  }
 }
 
-void updateCollectionStatus() {
-  // v1, flags (IMU ok / collection on / subscribed), WHO_AM_I, reserved,
-  // cumulative sent, dropped, and I2C error counters, all little endian.
-  uint8_t data[16] = {1, uint8_t((imuReady ? 1 : 0) | (collecting ? 2 : 0) |
-                     (imuData.notifyEnabled() ? 4 : 0)), whoAmI, 0};
-  writeWord(data + 4, streamSent); writeWord(data + 8, streamDropped);
-  writeWord(data + 12, imuErrors);
-  collectionStatus.write(data, sizeof(data));
+void readCollectionStatus(uint16_t handle, BLECharacteristic*, ble_gatts_evt_read_t* request) {
+  auto* peer = clients.find(handle);
+  // Same v1 wire format; collection state and counters belong to the reader.
+  uint8_t data[16] = {1, uint8_t((imuReady ? 1 : 0) |
+    (peer && peer->collecting ? 2 : 0) | (imuData.notifyEnabled(handle) ? 4 : 0)), whoAmI, 0};
+  writeWord(data + 4, peer ? peer->sent : 0);
+  writeWord(data + 8, peer ? peer->dropped : 0); writeWord(data + 12, imuErrors);
+  ble_gatts_rw_authorize_reply_params_t reply = {};
+  reply.type = BLE_GATTS_AUTHORIZE_TYPE_READ;
+  reply.params.read.gatt_status = request->offset <= sizeof(data) ?
+      BLE_GATT_STATUS_SUCCESS : BLE_GATT_STATUS_ATTERR_INVALID_OFFSET;
+  reply.params.read.update = 1;
+  reply.params.read.offset = 0; reply.params.read.len = sizeof(data);
+  reply.params.read.p_data = data;
+  sd_ble_gatts_rw_authorize_reply(handle, &reply);
 }
 
-void collectionCommand(uint16_t, BLECharacteristic*, uint8_t* data, uint16_t length) {
-  if (length == 1 && data[0] <= 1) collecting = data[0] == 1;
+void collectionCommand(uint16_t handle, BLECharacteristic*, uint8_t* data, uint16_t length) {
+  auto* peer = clients.find(handle);
+  if (peer && length == 1 && data[0] <= 1) peer->collecting = data[0] == 1;
 }
 
-void collectionDisconnected(uint16_t, uint8_t) {
-  collecting = false; // Battery boot and disconnect always return to cadence mode.
-}
+void collectionConnected(uint16_t handle) { clients.connect(handle); }
+void collectionDisconnected(uint16_t handle, uint8_t) { clients.disconnect(handle); }
 
 void readBattery() {
   batteryAdc = analogRead(PIN_VBAT);
@@ -139,6 +155,12 @@ void readBattery() {
                     uint8_t(batteryAdc), uint8_t(batteryAdc >> 8),
                     uint8_t(batteryCharging), uint8_t(usbPower)};
   batteryVoltage.write(data, sizeof(data));
+  uint8_t previous = batteryPct;
+  batteryPct = batteryPercent(batteryMv);
+  batteryLevel.write8(batteryPct);
+  if (previous != batteryPct) for (auto& peer : clients.slots)
+    if (peer.handle != 0xffff && batteryLevel.notifyEnabled(peer.handle))
+      notify(peer.handle, batteryLevel, &batteryPct, 1);
 }
 
 void sampleImu(uint32_t now) {
@@ -170,11 +192,28 @@ void publish(uint32_t now) {
   // Mandatory speed uses a placeholder step length; no optional features claimed.
   uint16_t speed = uint16_t(lroundf(spm * STEP_LENGTH_M / 60.0f * 256.0f));
   uint8_t packet[4] = {0, uint8_t(speed), uint8_t(speed >> 8), spm};
+  memcpy(cadencePacket, packet, sizeof(packet));
   measurement.write(packet, sizeof(packet));
-  if (measurement.notifyEnabled()) {
-    if (measurement.notify(packet, sizeof(packet))) ++notifications;
-    else ++notifyErrors;
+  for (auto& peer : clients.slots)
+    if (peer.handle != 0xffff) peer.cadencePending = true;
+}
+
+void flushCadence() {
+  for (auto& peer : clients.slots) {
+    if (peer.handle == 0xffff || !peer.cadencePending) continue;
+    if (!measurement.notifyEnabled(peer.handle)) { peer.cadencePending = false; continue; }
+    uint32_t result = notify(peer.handle, measurement, cadencePacket, sizeof(cadencePacket));
+    // Give cadence priority over raw samples; retry queue congestion next loop.
+    if (result == NRF_ERROR_RESOURCES) continue;
+    peer.cadencePending = false;
+    if (result == NRF_SUCCESS) ++notifications; else ++notifyErrors;
   }
+}
+
+bool cadenceSubscribed() {
+  for (auto& peer : clients.slots)
+    if (peer.handle != 0xffff && measurement.notifyEnabled(peer.handle)) return true;
+  return false;
 }
 
 void serialCommands() {
@@ -206,12 +245,12 @@ void telemetry(uint32_t now) {
     "\"imu_errors\":%lu,\"a_g\":[%.4f,%.4f,%.4f],\"gyro_dps\":[%.2f,%.2f,%.2f],"
     "\"strikes\":%lu,\"cadence_spm\":%u,\"connected\":%s,\"subscribed\":%s,"
     "\"notifications\":%lu,\"notify_errors\":%lu,\"battery_mv\":%u,"
-    "\"charging\":%s,\"usb_power\":%s}\n",
+    "\"battery_pct\":%u,\"connections\":%u,\"charging\":%s,\"usb_power\":%s}\n",
     (unsigned long)now, fixedCadence ? "mock" : "imu", imuReady ? "true" : "false",
     whoAmI, (unsigned long)samples, (unsigned long)imuErrors, ax, ay, az, gx, gy, gz,
     (unsigned long)gyroCadence.cycles, cadence(now), Bluefruit.connected() ? "true" : "false",
-    measurement.notifyEnabled() ? "true" : "false", (unsigned long)notifications,
-    (unsigned long)notifyErrors, batteryMv, batteryCharging ? "true" : "false",
+    cadenceSubscribed() ? "true" : "false", (unsigned long)notifications,
+    (unsigned long)notifyErrors, batteryMv, batteryPct, Bluefruit.Periph.connected(), batteryCharging ? "true" : "false",
     usbPower ? "true" : "false");
   logLength = length > 0 && length < int(sizeof(logBuffer)) ? length : 0;
   logOffset = 0;
@@ -236,18 +275,19 @@ void setup() {
   analogOversampling(4);
   Serial.begin(115200); // Never wait for USB: standalone battery operation.
   // 20-byte packets need no MTU negotiation; buffer short radio scheduling bursts.
-  Bluefruit.configPrphConn(23, 6, 16, 1);
-  Bluefruit.begin(1, 0);
+  Bluefruit.configPrphConn(23, 6, 64, 1);
+  Bluefruit.begin(2, 0);
   imuReady = startImu();
   digitalWrite(LED_RED, imuReady ? HIGH : LOW);
   Bluefruit.autoConnLed(false);
   Bluefruit.setName("Carl Foot Pod");
   Bluefruit.setTxPower(4);
   Bluefruit.Periph.setConnInterval(12, 24); // 15–30 ms, enough for the 104 Hz stream.
+  Bluefruit.Periph.setConnectCallback(collectionConnected);
   Bluefruit.Periph.setDisconnectCallback(collectionDisconnected);
   deviceInfo.setManufacturer("Carl");
   deviceInfo.setModel("XIAO nRF52840 Sense");
-  deviceInfo.setSoftwareRev("0.3.0");
+  deviceInfo.setSoftwareRev("0.4.0");
   deviceInfo.begin();
   rsc.begin();
   measurement.setProperties(CHR_PROPS_NOTIFY);
@@ -268,39 +308,53 @@ void setup() {
   collectionControl.setProperties(CHR_PROPS_WRITE);
   collectionControl.setPermission(SECMODE_NO_ACCESS, SECMODE_OPEN);
   collectionControl.setFixedLen(1);
-  collectionControl.setWriteCallback(collectionCommand);
+  collectionControl.setWriteCallback(collectionCommand, false);
   collectionControl.begin();
   collectionStatus.setProperties(CHR_PROPS_READ);
   collectionStatus.setPermission(SECMODE_OPEN, SECMODE_NO_ACCESS);
-  collectionStatus.setFixedLen(16); collectionStatus.begin();
+  collectionStatus.setFixedLen(16);
+  collectionStatus.setReadAuthorizeCallback(readCollectionStatus, false);
+  collectionStatus.begin();
   batteryVoltage.setProperties(CHR_PROPS_READ);
   batteryVoltage.setPermission(SECMODE_OPEN, SECMODE_NO_ACCESS);
   batteryVoltage.setFixedLen(6); batteryVoltage.begin();
+  batteryService.begin();
+  batteryLevel.setProperties(CHR_PROPS_READ | CHR_PROPS_NOTIFY);
+  batteryLevel.setPermission(SECMODE_OPEN, SECMODE_NO_ACCESS);
+  batteryLevel.setFixedLen(1);
+  batteryLevel.setUserDescriptor("Battery level (estimated)");
+  batteryLevel.begin();
   readBattery();
-  updateCollectionStatus();
   Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
   Bluefruit.Advertising.addAppearance(0x0441); // Running/walking sensor, in shoe.
   Bluefruit.Advertising.addService(rsc);
   Bluefruit.Advertising.addName();
   Bluefruit.ScanResponse.addService(collection);
   Bluefruit.Advertising.restartOnDisconnect(true);
-  Bluefruit.Advertising.setInterval(32, 244);
+  Bluefruit.Advertising.setInterval(160, 244); // 100–152.5 ms; leave airtime for both links.
   Bluefruit.Advertising.setFastTimeout(30);
   Bluefruit.Advertising.start(0); // Continue advertising at rest, without USB.
 }
 
 void loop() {
-  static uint32_t sampleTimer = 0, publishTimer = 0, logTimer = 0;
+  static uint32_t sampleTimer = 0, publishTimer = 0, logTimer = 0, advertisingTimer = 0;
   uint32_t now = millis();
   serialCommands();
+  flushCadence();
   if (imuReady && uint32_t(now - sampleTimer) >= 5) {
     sampleTimer = now; sampleImu(now);
   }
   if (uint32_t(now - publishTimer) >= 1000) {
-    publishTimer = now; readBattery(); if (!collecting) publish(now);
+    publishTimer = now; readBattery(); publish(now);
   }
   if (uint32_t(now - logTimer) >= 200) {
-    logTimer = now; telemetry(now); updateCollectionStatus();
+    logTimer = now; telemetry(now);
+  }
+  if (uint32_t(now - advertisingTimer) >= 200) {
+    advertisingTimer = now;
+    // Bluefruit's automatic restart only handles the last client disconnect.
+    if (Bluefruit.Periph.connected() < 2 && !Bluefruit.Advertising.isRunning())
+      Bluefruit.Advertising.start(0);
   }
   flushTelemetry();
   delay(1);

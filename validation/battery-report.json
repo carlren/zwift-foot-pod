@@ -1,47 +1,57 @@
 {
-  "checked_utc": "2026-10-06T05:56:01.242562+00:00",
+  "checked_utc": "2026-10-06T13:56:22.819442+00:00",
   "address": "FF:E3:4B:BE:98:B1",
   "readings": [
     {
-      "voltage_v": 3.968,
-      "adc_raw": 1830,
-      "charging": true,
-      "usb_power": true
+      "voltage_v": 4.174,
+      "adc_raw": 1925,
+      "charging": false,
+      "usb_power": true,
+      "percent": 100,
+      "percent_estimated": true
     },
     {
-      "voltage_v": 3.971,
-      "adc_raw": 1831,
-      "charging": true,
-      "usb_power": true
+      "voltage_v": 4.161,
+      "adc_raw": 1919,
+      "charging": false,
+      "usb_power": true,
+      "percent": 98,
+      "percent_estimated": true
     },
     {
-      "voltage_v": 3.971,
-      "adc_raw": 1831,
-      "charging": true,
-      "usb_power": true
+      "voltage_v": 4.168,
+      "adc_raw": 1922,
+      "charging": false,
+      "usb_power": true,
+      "percent": 99,
+      "percent_estimated": true
     },
     {
-      "voltage_v": 3.96,
-      "adc_raw": 1826,
-      "charging": true,
-      "usb_power": true
+      "voltage_v": 4.166,
+      "adc_raw": 1921,
+      "charging": false,
+      "usb_power": true,
+      "percent": 99,
+      "percent_estimated": true
     },
     {
-      "voltage_v": 3.958,
-      "adc_raw": 1825,
-      "charging": true,
-      "usb_power": true
+      "voltage_v": 4.17,
+      "adc_raw": 1923,
+      "charging": false,
+      "usb_power": true,
+      "percent": 99,
+      "percent_estimated": true
     }
   ],
-  "firmware": "0.3.0",
+  "firmware": "0.4.0",
   "imu": {
     "version": 1,
     "imu_ok": true,
     "collecting": false,
     "subscribed": false,
     "who_am_i": 106,
-    "sent": 2109,
-    "dropped": 3,
+    "sent": 0,
+    "dropped": 0,
     "imu_errors": 0
   },
   "readable": true

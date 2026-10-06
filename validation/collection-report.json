@@ -1,5 +1,5 @@
 {
-  "started_utc": "2026-10-06T05:55:24.775730+00:00",
+  "started_utc": "2026-10-06T14:01:40.892262+00:00",
   "label": "collection-validation",
   "seconds_requested": 20,
   "foot": "left",
@@ -12,13 +12,13 @@
   "accel_range_g": 8,
   "gyro_range_dps": 1000,
   "completed": true,
-  "samples": 2109,
-  "missing_packets": 3,
+  "samples": 2113,
+  "missing_packets": 0,
   "clipped_samples": 0,
-  "timing_gaps_over_20ms": 1,
-  "max_interval_us": 40039,
+  "timing_gaps_over_20ms": 0,
+  "max_interval_us": 10743,
   "address": "FF:E3:4B:BE:98:B1",
-  "firmware": "0.3.0",
+  "firmware": "0.4.0",
   "status_before": {
     "version": 1,
     "imu_ok": true,
@@ -30,9 +30,11 @@
     "imu_errors": 0
   },
   "battery": {
-    "voltage_v": 3.971,
-    "charging": true,
-    "usb_power": true
+    "voltage_v": 4.161,
+    "charging": false,
+    "usb_power": true,
+    "percent": 98,
+    "percent_estimated": true
   },
   "stopped_by_user": false,
   "status_after": {
@@ -41,15 +43,15 @@
     "collecting": false,
     "subscribed": false,
     "who_am_i": 106,
-    "sent": 2109,
-    "dropped": 3,
+    "sent": 2113,
+    "dropped": 0,
     "imu_errors": 0
   },
-  "ended_utc": "2026-10-06T05:55:54.027365+00:00",
-  "device_duration_s": 20.104492,
-  "received_hz": 104.852,
-  "sampled_hz": 105.001,
+  "ended_utc": "2026-10-06T14:02:07.067586+00:00",
+  "device_duration_s": 20.110351,
+  "received_hz": 105.021,
+  "sampled_hz": 105.021,
   "validation": "PASS: packet format, Bluetooth-only capture, CSV, gaps, stop, reconnect, cadence",
-  "mean_acceleration_g": 1.0314,
-  "recording": "/home/carlren/Documents/zwift-foot-pod-firmware/recordings/20261006T055524_775644Z_collection-validation"
+  "mean_acceleration_g": 1.0392,
+  "recording": "/home/carlren/Documents/zwift-foot-pod-firmware/recordings/20261006T140140_892176Z_collection-validation"
 }

@@ -1,10 +1,10 @@
 {
-  "started_utc": "2026-10-06T05:53:22.962987+00:00",
+  "started_utc": "2026-10-06T14:00:38.758408+00:00",
   "result": "PASS",
   "imu": {
     "who_am_i": "0x6a",
     "sample_rate_hz": 105.0,
-    "mean_acceleration_g": 1.0315,
+    "mean_acceleration_g": 1.0396,
     "errors": 0
   },
   "address": "FF:E3:4B:BE:98:B1",
@@ -24,7 +24,7 @@
     },
     {
       "cadence_spm": 180,
-      "packets": 4,
+      "packets": 3,
       "raw": "001a02b4"
     },
     {
@@ -35,7 +35,7 @@
   ],
   "invalid_commands": "rejected out of range, overflow, negative, and truncated input",
   "idle_without_serial_host": {
-    "packets": 5,
+    "packets": 4,
     "raw": "00000000"
   },
   "reconnect": "passed",
