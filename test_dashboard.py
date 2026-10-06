@@ -1,5 +1,6 @@
 """Small repeatable checks for the actual live detector and dashboard request validation."""
 import asyncio
+import math
 from pathlib import Path
 import tempfile
 
@@ -10,27 +11,30 @@ import dashboard
 from types import SimpleNamespace
 
 
-def point(t, magnitude=1):
+def point(t, magnitude=1, rotation=0):
     return dict(time_s=t,elapsed_us=int(t*1_000_000),device_us=int(t*1_000_000),sequence=int(t*100),
-                accel=[0,0,magnitude],gyro=[0,0,0],raw=[0,0,0,0,0,int(magnitude/0.000244)],
+                accel=[0,0,magnitude],gyro=[0,rotation,0],raw=[0,int(rotation/.035),0,0,0,int(magnitude/0.000244)],
                 received_utc='2026-10-06T00:00:00+00:00',received_monotonic_ns=int(t*1e9),missing=0)
 
 
 def main():
-    for spm in (109, 180):
+    for spm in (70, 109, 180):
         detector = Detector()
         period = 120 / spm
         for i in range(1000):
             t = i/100
-            result = detector.update(point(t, 1.6 if (t % period) < .04 else 1))
+            result = detector.update(point(t,1,rotation=150*math.sin(2*math.pi*t/period)))
         assert abs(result["cadence"] - spm) < 2, result
-        assert result["strikes"] >= 8
+        assert result["strikes"] >= 5
         assert 0 <= result["rhythm"] <= 1
         assert detector.update(point(14))["cadence"] == 0
-    detector = Detector()
-    assert detector.update(point(0, 1.6))["strike"]
-    detector.update(point(.1))
-    assert not detector.update(point(.2, 1.6))["strike"]
+    detector=Detector()
+    for i in range(600):
+        assert not detector.update(point(i/100,2 if i%100<5 else 1))['strike'], 'Acceleration alone triggered a cycle'
+    detector=Detector()
+    for i in range(200):
+        detector.update(point(i/100,rotation=100))
+    assert detector.strikes==0, 'Steady positive rotation counted as cycles without reversal'
     for data in ({"peak": float("nan")}, {"peak": 1, "rearm": 1.1}, {"min_stride_ms": 0}):
         try:
             settings(data)
@@ -69,6 +73,8 @@ def main():
             saved = Path(app.state['directory'])
             app.sample(point(.6));app.sample(point(1.2))
             assert app.state['recorded_samples']==2
+            timer=app.snapshot(0)
+            assert 0<=timer['timer_remaining_seconds']<=5 and timer['timer_elapsed_seconds']>=0
             loop.run_until_complete(app.command('stop',{}))
             assert app.state['phase']=='preview' and not app.state['recording']
             app.sample(point(1.8))
@@ -79,6 +85,26 @@ def main():
             assert rows[0]['sequence']=='60' and rows[0]['elapsed_us']=='0'
             report=json.loads((saved/'session.json').read_text())
             assert report['samples']==2 and report['stopped_by_user']
+            assert 'wall_duration_s' in report
+            report['wall_duration_s']=60
+            (saved/'session.json').write_text(json.dumps(report))
+            reply=loop.run_until_complete(app.command('reference',{'steps':109}))
+            assert reply['reference_spm']==109
+            annotated=json.loads((saved/'session.json').read_text())
+            assert annotated['reference_step_count']==109 and annotated['reference_count_duration_s']==60
+            assert app.snapshot(0)['timer_elapsed_seconds']==60
+            report['wall_duration_s']=30
+            (saved/'session.json').write_text(json.dumps(report))
+            assert loop.run_until_complete(app.command('reference',{'steps':50}))['reference_spm']==100
+            assert loop.run_until_complete(app.command('reference',{'steps':0}))['reference_spm']==0
+            assert loop.run_until_complete(app.command('reference',{'reference_spm':120}))['reference_spm']==120
+            for bad in (-1,1.5,float('inf')):
+                try:
+                    loop.run_until_complete(app.command('reference',{'steps':bad}))
+                except ValueError:
+                    pass
+                else:
+                    raise AssertionError('Invalid step count accepted')
             snapshot=app.snapshot(3)
             assert len(snapshot['points'])==1 and snapshot['cursor']==4
             loop.run_until_complete(app.command('record',{'label':'second','seconds':5}))

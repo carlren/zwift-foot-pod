@@ -19,43 +19,51 @@ ROOT = Path(__file__).resolve().parent
 
 
 class Detector:
-    """Prototype matching the firmware's one-foot threshold detector; replace as we fit gait data."""
-    def __init__(self, peak=1.30, rearm=1.08, min_stride_ms=450):
-        self.peak, self.rearm, self.minimum = peak, rearm, min_stride_ms / 1000
-        self.last = None
-        self.armed = True
-        self.spm = 0.0
-        self.strikes = 0
+    """Signed gyro-cycle prototype. One complete rotation cycle represents one-foot stride."""
+    def __init__(self, peak=40, rearm=-20, min_stride_ms=450, axis='y'):
+        self.peak,self.rearm,self.minimum,self.axis=peak,rearm,min_stride_ms/1000,axis
+        self.last=self.last_t=self.filtered=None
+        self.armed=False
+        self.spm=0.0
+        self.strikes=0
 
     def update(self, sample):
-        t = sample["time_s"]
-        magnitude = math.sqrt(sum(v*v for v in sample["accel"]))
-        if self.last is not None and t - self.last > 3:
-            self.last, self.spm, self.armed = None, 0.0, True
-        if magnitude < self.rearm:
-            self.armed = True
-        strike = False
-        if self.armed and magnitude >= self.peak:
-            self.armed = False
-            if self.last is None or t - self.last >= self.minimum:
+        t=sample['time_s']
+        raw=sample['gyro'][{'x':0,'y':1,'z':2}[self.axis]]
+        dt=t-self.last_t if self.last_t is not None else 0
+        # A short low-pass filter removes high-frequency jitter, preserving signed rotation.
+        if self.filtered is None or dt<=0 or dt>.1:
+            self.filtered=raw
+            self.armed=False
+        else:
+            self.filtered+=(1-math.exp(-dt/.04))*(raw-self.filtered)
+        self.last_t=t
+        if self.last is not None and t-self.last>3:
+            self.last,self.spm,self.armed=None,0.0,False
+        if self.filtered<=self.rearm:
+            self.armed=True
+        event=False
+        if self.armed and self.filtered>=self.peak:
+            self.armed=False
+            if self.last is None or t-self.last>=self.minimum:
                 if self.last is not None:
-                    measured = 120 / (t - self.last) # Two total steps per one-foot stride.
-                    self.spm = measured if not self.spm else 0.6*self.spm + 0.4*measured
-                self.last = t
-                self.strikes += 1
-                strike = True
-        cadence = min(255, max(0, self.spm))
-        phase = ((t - self.last) * cadence / 120) % 1 if cadence and self.last is not None else None
-        return dict(magnitude=round(magnitude, 5), strike=strike, cadence=round(cadence, 2),
-                    strikes=self.strikes, phase=phase, rhythm=(1 + math.cos(2*math.pi*phase))/2 if phase is not None else None)
+                    measured=120/(t-self.last)
+                    self.spm=measured if not self.spm else .6*self.spm+.4*measured
+                self.last=t;self.strikes+=1;event=True
+        cadence=min(255,max(0,self.spm))
+        phase=((t-self.last)*cadence/120)%1 if cadence and self.last is not None else None
+        return dict(magnitude=round(math.sqrt(sum(v*v for v in sample['accel'])),5),
+            gyro_axis=self.axis,gyro_signal=raw,gyro_filtered=round(self.filtered,4),
+            strike=event,cadence=round(cadence,2),strikes=self.strikes,phase=phase,
+            rhythm=(1+math.cos(2*math.pi*phase))/2 if phase is not None else None)
 
 
 def settings(data):
-    peak, rearm = float(data.get("peak", 1.30)), float(data.get("rearm", 1.08))
-    minimum = float(data.get("min_stride_ms", 450))
-    if not all(math.isfinite(v) for v in (peak, rearm, minimum)) or not (1.0 <= rearm < peak <= 5 and 250 <= minimum <= 2000):
-        raise ValueError("Use 1.0 ≤ rearm < peak ≤ 5 g and a stride minimum of 250–2000 ms")
-    return dict(peak=peak, rearm=rearm, min_stride_ms=minimum)
+    peak,rearm=float(data.get('peak',40)),float(data.get('rearm',-20))
+    minimum=float(data.get('min_stride_ms',450));axis=data.get('axis','y')
+    if not all(math.isfinite(v) for v in (peak,rearm,minimum)) or not (5<=peak<=900 and -900<=rearm<=0 and 250<=minimum<=2000) or axis not in ('x','y','z'):
+        raise ValueError('Choose X/Y/Z, a positive gyro trigger of 5–900 °/s, a negative rearm of -900–0 °/s, and 250–2000 ms minimum stride')
+    return dict(peak=peak,rearm=rearm,min_stride_ms=minimum,axis=axis)
 
 
 def recording_args(data):
@@ -68,8 +76,8 @@ def recording_args(data):
         raise ValueError("Use a short label containing letters, digits, hyphens or underscores")
     if not math.isfinite(seconds) or not 5 <= seconds <= 3600 or foot not in ("left", "right"):
         raise ValueError("Choose a duration of 5–3600 seconds and left or right foot")
-    if reference is not None and (not math.isfinite(reference) or not 30 <= reference <= 255):
-        raise ValueError("Reference cadence must be 30–255 steps/min")
+    if reference is not None and (not math.isfinite(reference) or not 0 <= reference <= 255):
+        raise ValueError("Reference cadence must be 0–255 steps/min")
     return SimpleNamespace(label=label, seconds=seconds, foot=foot, reference_spm=reference, speed_kph=None)
 
 
@@ -90,6 +98,21 @@ class Dashboard:
         self.fit_changes = []
         self.index = 0
         self.deadline = None
+        self.record_started = None
+        # Keep the latest saved dashboard session available for reference annotation after restart.
+        for path in sorted((ROOT/'recordings').glob('*/session.json'),reverse=True):
+            if not (path.parent/'fit.csv').exists():
+                continue
+            try:
+                report = json.loads(path.read_text())
+                if report.get('exclude_from_training'):
+                    continue
+                self.state.update(directory=str(path.parent),report=report,reference_spm=report.get('reference_spm'),
+                    recorded_samples=report.get('samples',0),recorded_seconds=report.get('device_duration_s',0),
+                    seconds=report.get('seconds_requested',180),label=report.get('label','walking'))
+                break
+            except (ValueError,OSError):
+                continue
 
     def snapshot(self, since):
         with self.lock:
@@ -97,6 +120,13 @@ class Dashboard:
             state['points'] = [p for p in self.history if p['index']>since]
             state['cursor'] = self.index
             state['age_s'] = round(time.monotonic()-self.state.get('last_received',time.monotonic()),2)
+            if self.recording:
+                state['timer_elapsed_seconds'] = round(min(self.state['seconds'],max(0,time.monotonic()-self.record_started)),3)
+                state['timer_remaining_seconds'] = round(max(0,self.deadline-time.monotonic()),3)
+            else:
+                report = self.state.get('report') or {}
+                state['timer_elapsed_seconds'] = report.get('wall_duration_s',report.get('device_duration_s',0))
+                state['timer_remaining_seconds'] = 0
             return state
 
     def update(self, values):
@@ -109,12 +139,14 @@ class Dashboard:
         if not self.recording:
             return
         saved = self.recording
+        saved.metadata['wall_duration_s'] = round(min(self.state['seconds'],max(0,time.monotonic()-self.record_started)),3)
         report = saved.finish(error,stopped_by_user,self.connection)
         self.fit_handle.close()
         (saved.directory/'fit-settings.json').write_text(json.dumps(
-            dict(algorithm='firmware-threshold-prototype',changes=self.fit_changes),indent=2)+'\n')
+            dict(algorithm='signed-gyro-cycle-prototype-v1',changes=self.fit_changes),indent=2)+'\n')
         self.recording = self.fit_handle = self.fit_writer = None
         self.deadline = None
+        self.record_started = None
         self.state.update(recording=False,report=report,recorded_samples=report['samples'],
                           recorded_seconds=report['device_duration_s'])
         if self.state['phase']=='recording':
@@ -132,7 +164,7 @@ class Dashboard:
                 self.finish_recording()
             if self.recording:
                 relative = self.recording.append(point)
-                self.fit_writer.writerow([point['sequence'],relative,fit['magnitude'],int(fit['strike']),
+                self.fit_writer.writerow([point['sequence'],relative,fit['gyro_axis'],fit['gyro_signal'],fit['gyro_filtered'],fit['magnitude'],int(fit['strike']),
                     fit['cadence'],fit['phase'],self.config['peak'],self.config['rearm'],self.config['min_stride_ms']])
                 count = self.recording.metadata['samples']
                 self.state.update(recorded_samples=count,recorded_seconds=relative)
@@ -176,16 +208,42 @@ class Dashboard:
                 self.recording = Recording(args,self.connection)
                 self.fit_handle = (self.recording.directory/'fit.csv').open('x',newline='')
                 self.fit_writer = csv.writer(self.fit_handle)
-                self.fit_writer.writerow(['sequence','time_s','magnitude_g','foot_strike','cadence_spm',
-                                         'phase','peak_g','rearm_g','min_stride_ms'])
+                self.fit_writer.writerow(['sequence','time_s','gyro_axis','gyro_raw_dps','gyro_filtered_dps','acceleration_magnitude_g','stride_event','cadence_spm',
+                                         'phase','gyro_peak_dps','gyro_rearm_dps','min_stride_ms'])
                 self.fit_changes = [dict(time_s=0,**self.config)]
-                self.deadline = time.monotonic()+args.seconds
+                self.record_started = time.monotonic()
+                self.deadline = self.record_started+args.seconds
                 self.state.update(phase='recording',recording=True,directory=str(self.recording.directory),
                     recorded_samples=0,recorded_seconds=0,report=None,reference_spm=args.reference_spm,
                     label=args.label,seconds=args.seconds,foot=args.foot)
         elif action=='stop':
             with self.lock:
                 self.finish_recording(stopped_by_user=True)
+        elif action=='reference':
+            with self.lock:
+                if self.recording or not self.state.get('directory'):
+                    raise ValueError('Finish a recording before saving its reference cadence')
+                path = Path(self.state['directory'])/'session.json'
+                report = json.loads(path.read_text())
+                duration = report.get('wall_duration_s',report.get('device_duration_s',0))
+                if 'steps' in data:
+                    steps = float(data['steps'])
+                    if not math.isfinite(steps) or not 0 <= steps <= 1_000_000 or steps != int(steps) or duration <= 0:
+                        raise ValueError('Enter a nonnegative whole count of steps for the completed recording')
+                    reference = round(steps*60/duration,2)
+                    report['reference_step_count'] = int(steps)
+                    report['reference_count_duration_s'] = duration
+                    report['reference_source'] = 'manual_total_step_count'
+                else:
+                    reference = data.get('reference_spm')
+                    report['reference_source'] = 'manual_cadence'
+                    report.pop('reference_step_count',None)
+                    report.pop('reference_count_duration_s',None)
+                reference = recording_args({'reference_spm':reference}).reference_spm
+                report['reference_spm'] = reference
+                path.write_text(json.dumps(report,indent=2)+'\n')
+                self.state.update(report=report,reference_spm=reference)
+                return {'ok':True,'reference_spm':reference,'count_duration_s':duration}
         elif action=='disconnect':
             if self.task and not self.task.done():
                 if self.state['phase']=='connecting':
@@ -260,7 +318,7 @@ def handler(app):
                 if not isinstance(data, dict):
                     raise ValueError("Expected a JSON object")
                 action = self.path.removeprefix("/api/")
-                if self.path != "/api/" + action or action not in ("connect", "record", "stop", "disconnect", "tune"):
+                if self.path != "/api/" + action or action not in ("connect", "record", "stop", "disconnect", "tune", "reference"):
                     raise ValueError("Unknown command")
                 future = asyncio.run_coroutine_threadsafe(app.command(action, data), app.loop)
                 self.send(200, future.result(timeout=30))

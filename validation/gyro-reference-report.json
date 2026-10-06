@@ -1,0 +1,111 @@
+{
+  "result": "PASS",
+  "recordings": [
+    {
+      "algorithm": "signed-gyro-cycle-prototype-v1",
+      "settings": {
+        "peak": 40.0,
+        "rearm": -20.0,
+        "min_stride_ms": 450.0,
+        "axis": "y"
+      },
+      "recording": "recordings/20261006T052553_045206Z_walking",
+      "duration_s": 59.975586,
+      "stride_cycles": 35,
+      "warmup_excluded_s": 5,
+      "mean_cadence_spm": 70.66,
+      "median_cadence_spm": 70.69,
+      "reference_spm": 70.5,
+      "reference_spm_range": [
+        70,
+        71
+      ],
+      "reference_speed_entered": "1.2m/h"
+    },
+    {
+      "algorithm": "signed-gyro-cycle-prototype-v1",
+      "settings": {
+        "peak": 40.0,
+        "rearm": -20.0,
+        "min_stride_ms": 450.0,
+        "axis": "y"
+      },
+      "recording": "recordings/20261006T052707_444318Z_walking",
+      "duration_s": 59.964844,
+      "stride_cycles": 35,
+      "warmup_excluded_s": 5,
+      "mean_cadence_spm": 70.4,
+      "median_cadence_spm": 70.38,
+      "reference_spm": 71.0,
+      "reference_spm_range": [
+        70,
+        71
+      ],
+      "reference_speed_entered": "1.2m/h"
+    },
+    {
+      "algorithm": "signed-gyro-cycle-prototype-v1",
+      "settings": {
+        "peak": 40.0,
+        "rearm": -20.0,
+        "min_stride_ms": 450.0,
+        "axis": "y"
+      },
+      "recording": "recordings/20261006T052902_519778Z_walking",
+      "duration_s": 60.030274,
+      "stride_cycles": 46,
+      "warmup_excluded_s": 5,
+      "mean_cadence_spm": 92.06,
+      "median_cadence_spm": 91.94,
+      "reference_spm": 92.0,
+      "reference_spm_range": [
+        92,
+        92
+      ],
+      "reference_speed_entered": "2mph"
+    },
+    {
+      "algorithm": "signed-gyro-cycle-prototype-v1",
+      "settings": {
+        "peak": 40.0,
+        "rearm": -20.0,
+        "min_stride_ms": 450.0,
+        "axis": "y"
+      },
+      "recording": "recordings/20261006T053044_112366Z_walking",
+      "duration_s": 59.984375,
+      "stride_cycles": 46,
+      "warmup_excluded_s": 5,
+      "mean_cadence_spm": 92.18,
+      "median_cadence_spm": 92.23,
+      "reference_spm": 92.0,
+      "reference_spm_range": [
+        92,
+        92
+      ],
+      "reference_speed_entered": "2mph"
+    },
+    {
+      "algorithm": "signed-gyro-cycle-prototype-v1",
+      "settings": {
+        "peak": 40.0,
+        "rearm": -20.0,
+        "min_stride_ms": 450.0,
+        "axis": "y"
+      },
+      "recording": "recordings/20261006T053216_845529Z_walking",
+      "duration_s": 59.979493,
+      "stride_cycles": 55,
+      "warmup_excluded_s": 5,
+      "mean_cadence_spm": 109.98,
+      "median_cadence_spm": 110.0,
+      "reference_spm": 110.0,
+      "reference_spm_range": [
+        110,
+        110
+      ],
+      "reference_speed_entered": "3mph"
+    }
+  ],
+  "note": "Same Y-axis defaults on every recording. User-reported total cadence, one user, three walking speeds."
+}

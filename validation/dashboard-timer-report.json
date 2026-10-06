@@ -1,0 +1,11 @@
+{
+  "result": "PASS",
+  "remaining_at_first_read": 4.848,
+  "remaining_during_record": 3.881,
+  "actual_window_s": 5.0,
+  "recorded_samples": 519,
+  "count_reference_test": "10 total steps / 5 seconds = 120 steps per minute, persisted in session metadata",
+  "gyro_axis": "y",
+  "preview_continues": true,
+  "mobile_layout_verified": true
+}

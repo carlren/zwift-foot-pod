@@ -21,6 +21,17 @@ starting at zero. **Stop recording**, or the duration timer, saves the session a
 keeps the live preview running. You can record another session on the same Bluetooth
 connection. **Disconnect** releases the pod and saves any active recording first.
 Disconnect the pod from Zwift before connecting here.
+
+The recording timer shows a large countdown, elapsed seconds and a progress bar.
+Click **Use 60 seconds** for a one-minute manual cadence count. Count steps from
+**both feet** during that recording. After it ends, enter the total in **Counted
+steps** and click **Calculate & save reference**. The app calculates
+`steps × 60 / actual elapsed seconds` and saves both the count and reference cadence
+in that recording's `session.json`. If you stop early, its actual elapsed time is
+used. If you count only one foot, double your count before entering it. Alternatively,
+enter a known steps/min value in the reference field and click **Save typed steps/min**.
+The latest saved recording remains available for annotation after restarting the app.
+
 The server uses Python's standard library and the existing BLE recorder; no new
 dependencies or firmware update are needed. It only listens on this computer.
 
@@ -30,16 +41,27 @@ The shoe animation and normalized curve illustrate the **estimated one-foot rhyt
 not reconstructed foot position. Battery voltage and charger status are read at
 connection time; they are not continuously refreshed during the high-rate stream.
 
-The fit is explicitly the current **threshold prototype**, matching the firmware's
-1.30 g detection, 1.08 g rearm, minimum stride interval and cadence smoothing.
-It is not a trained or validated gait algorithm. The live detector settings can be
-tuned while recording; changes reset the detector and apply to subsequent samples.
-The displayed history retains the fit that was calculated at each sample's time.
-Replace `Detector.update()` in `dashboard.py` as the real algorithm is developed.
+The dashboard fit is a **signed gyroscope cycle prototype**. Y rotation is the
+primary default axis for the current shoe mounting; X/Y/Z is selectable. A 40 ms
+low-pass filter removes jitter. A negative rearm (default -20 °/s) followed by a
+positive crossing (default 40 °/s) detects one cycle per one-foot stride, with a
+450 ms minimum interval and a 3 second stop timeout. Total cadence is twice the
+one-foot cycle rate. Acceleration remains a secondary signal for correlation and
+impact inspection; it cannot independently trigger cadence. Cycle markers are
+not validated touchdown times. The shoe animation illustrates cycle timing.
+
+This is not a broadly validated gait algorithm. Unchanged defaults replayed five
+one-minute recordings within the user's references: about 70–71 steps/min at the
+slower pace 92 steps/min at 2 mph, and 110 steps/min at 3 mph. Results are in
+`validation/gyro-reference-report.json`. The onboard firmware still uses its
+original mock accelerometer detector; this gyro estimator runs on the computer
+while developing the replacement. Live settings reset the detector and apply to
+subsequent samples, while raw recording continues. Replace `Detector.update()` in
+`dashboard.py` as the algorithm is developed.
 
 All raw samples remain in `imu.csv` and `session.json`. The dashboard also saves
-`fit.csv` with every sample's acceleration magnitude, foot-strike decision, cadence,
-phase, and detector settings, plus `fit-settings.json` with configuration changes.
+`fit.csv` with every sample's selected gyro axis, raw / filtered angular velocity,
+acceleration magnitude, stride-cycle decision, cadence, phase, and detector settings, plus `fit-settings.json` with configuration changes.
 Download the raw data, fit, and session details through the links in the app.
 The display shows the latest 20 seconds, updating five times per second; recording
 keeps every received sample. If the connection fails, partial files are retained
@@ -49,10 +71,22 @@ and the app reports the error. Click **Connect** to reconnect and preview, then 
 rtk .venv/bin/python test_dashboard.py
 ```
 
-This verifies cadence on synthetic 109/180 spm signals, the stop timeout, extra-strike
+This verifies cadence on synthetic 70/109/180 spm gyro signals, the stop timeout, extra-strike
 rejection, request validation, timestamp wrapping, file-free preview, recording
 boundaries, live snapshots, repeat recording and fit CSV output. The browser and
 real-pod integration check is recorded in `validation/dashboard-report.json`.
+
+## Replay recordings through the gyro detector
+
+```sh
+rtk .venv/bin/python replay.py recordings/SESSION_FOLDER --axis y
+```
+
+This writes `gyro_fit.csv` and `gyro-summary.json` alongside a saved session,
+without overwriting its original `fit.csv`. The mean / median cadence exclude
+five seconds of estimator warm-up. Reference values come from `session.json`;
+the reference does not control the detector or force its estimates. The original
+speed text is preserved when the unit is uncertain.
 
 ## Read the battery voltage
 
