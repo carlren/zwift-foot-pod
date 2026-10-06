@@ -3,11 +3,10 @@
 #include <nrfx_twim.h>
 #include <hal/nrf_gpio.h>
 #include <math.h>
+#include "cadence.h"
 
 // Seeed nRF52 Boards 1.1.13; XIAO nRF52840 Sense (original, not Plus).
 constexpr uint8_t IMU_ADDRESS = 0x6A;
-constexpr float PEAK_G = 1.30f, REARM_G = 1.08f;
-constexpr uint32_t MIN_STRIDE_MS = 450, STOP_MS = 3000;
 constexpr float STEP_LENGTH_M = 0.70f; // Mock speed only; calibrate later.
 constexpr float BATTERY_DIVIDER = 1510.0f / 510.0f; // R16=1 MΩ, R17=510 kΩ.
 
@@ -23,12 +22,12 @@ uint16_t batteryAdc = 0, batteryMv = 0;
 bool batteryCharging = false, usbPower = false;
 volatile bool collecting = false;
 uint32_t streamSent = 0, streamDropped = 0;
-bool imuReady = false, armed = true, haveStrike = false;
+bool imuReady = false;
+GyroCadence gyroCadence;
 uint8_t whoAmI = 0, fixedCadence = 0;
-uint32_t samples = 0, imuErrors = 0, strikes = 0, lastStrike = 0;
+uint32_t samples = 0, imuErrors = 0;
 uint32_t notifications = 0, notifyErrors = 0, lastSample = 0;
 float ax = 0, ay = 0, az = 0, gx = 0, gy = 0, gz = 0;
-float estimatedSpm = 0;
 char command[40];
 uint8_t commandLength = 0;
 bool commandOverflow = false;
@@ -89,32 +88,18 @@ int16_t signedWord(const uint8_t* data) {
 }
 
 void resetEstimator() {
-  estimatedSpm = 0; haveStrike = false; armed = true;
-}
-
-void estimateCadence(float magnitude, uint32_t now) {
-  // ponytail: simple hysteresis detects one foot's strikes; replace after gait capture.
-  if (haveStrike && uint32_t(now - lastStrike) > STOP_MS) resetEstimator();
-  if (magnitude < REARM_G) armed = true;
-  if (!armed || magnitude < PEAK_G) return;
-  armed = false;
-  if (haveStrike && uint32_t(now - lastStrike) < MIN_STRIDE_MS) return;
-  if (haveStrike) {
-    float spm = 120000.0f / uint32_t(now - lastStrike); // One foot: two steps/stride.
-    estimatedSpm = estimatedSpm ? 0.6f * estimatedSpm + 0.4f * spm : spm;
-  }
-  lastStrike = now; haveStrike = true; ++strikes;
+  gyroCadence.reset();
 }
 
 void writeWord(uint8_t* out, uint32_t value) {
   for (uint8_t i = 0; i < 4; ++i) out[i] = uint8_t(value >> (8 * i));
 }
 
-void streamImu(const uint8_t* raw) {
+void streamImu(const uint8_t* raw, uint32_t sample_us) {
   if (!collecting || !imuData.notifyEnabled()) return;
   // Exactly 20 bytes fits the minimum BLE MTU: seq, acquisition us, gyro XYZ, accel XYZ.
   uint8_t packet[20];
-  writeWord(packet, samples); writeWord(packet + 4, micros());
+  writeWord(packet, samples); writeWord(packet + 4, sample_us);
   memcpy(packet + 8, raw, 12);
   uint16_t length = sizeof(packet);
   ble_gatts_hvx_params_t request = {};
@@ -168,15 +153,15 @@ void sampleImu(uint32_t now) {
   ay = signedWord(raw + 8) * 0.000244f;
   az = signedWord(raw + 10) * 0.000244f;
   ++samples; lastSample = now;
-  streamImu(raw);
-  estimateCadence(sqrtf(ax*ax + ay*ay + az*az), now);
+  uint32_t sample_us = micros();
+  gyroCadence.update(gy, sample_us);
+  streamImu(raw, sample_us);
 }
 
 uint8_t cadence(uint32_t now) {
   if (fixedCadence) return fixedCadence;
-  if (!imuReady || !samples || uint32_t(now - lastSample) > 250 ||
-      !haveStrike || uint32_t(now - lastStrike) > STOP_MS) return 0;
-  return uint8_t(constrain(lroundf(estimatedSpm), 0L, 255L));
+  if (!imuReady || !samples || uint32_t(now - lastSample) > 250) return 0;
+  return gyroCadence.cadence(micros());
 }
 
 void publish(uint32_t now) {
@@ -224,7 +209,7 @@ void telemetry(uint32_t now) {
     "\"charging\":%s,\"usb_power\":%s}\n",
     (unsigned long)now, fixedCadence ? "mock" : "imu", imuReady ? "true" : "false",
     whoAmI, (unsigned long)samples, (unsigned long)imuErrors, ax, ay, az, gx, gy, gz,
-    (unsigned long)strikes, cadence(now), Bluefruit.connected() ? "true" : "false",
+    (unsigned long)gyroCadence.cycles, cadence(now), Bluefruit.connected() ? "true" : "false",
     measurement.notifyEnabled() ? "true" : "false", (unsigned long)notifications,
     (unsigned long)notifyErrors, batteryMv, batteryCharging ? "true" : "false",
     usbPower ? "true" : "false");
@@ -262,7 +247,7 @@ void setup() {
   Bluefruit.Periph.setDisconnectCallback(collectionDisconnected);
   deviceInfo.setManufacturer("Carl");
   deviceInfo.setModel("XIAO nRF52840 Sense");
-  deviceInfo.setSoftwareRev("0.2.1");
+  deviceInfo.setSoftwareRev("0.3.0");
   deviceInfo.begin();
   rsc.begin();
   measurement.setProperties(CHR_PROPS_NOTIFY);

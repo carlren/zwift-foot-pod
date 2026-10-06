@@ -3,7 +3,7 @@
 Firmware for the original Seeed XIAO nRF52840 Sense, publishing directly over
 Bluetooth as **Carl Foot Pod**. No computer or relay is needed after boot.
 
-Firmware version 0.2.1. Cadence detection and speed are placeholders. Zwift pairing
+Firmware version 0.3.0. Cadence uses the validated signed Y-gyro detector; speed remains a placeholder. Zwift pairing
 and changing cadence have been confirmed by Carl. Battery life and battery-only
 power have not been tested here; collection control and data use Bluetooth only.
 
@@ -35,7 +35,7 @@ The latest saved recording remains available for annotation after restarting the
 The server uses Python's standard library and the existing BLE recorder; no new
 dependencies or firmware update are needed. It only listens on this computer.
 
-The dashboard shows all six IMU axes, acceleration magnitude, foot-strike markers,
+The dashboard shows all six IMU axes, filtered gyro rotation, stride-cycle markers,
 estimated total steps/min, optional reference cadence, sample rate and packet gaps.
 The shoe animation and normalized curve illustrate the **estimated one-foot rhythm**,
 not reconstructed foot position. Battery voltage and charger status are read at
@@ -53,9 +53,9 @@ not validated touchdown times. The shoe animation illustrates cycle timing.
 This is not a broadly validated gait algorithm. Unchanged defaults replayed five
 one-minute recordings within the user's references: about 70–71 steps/min at the
 slower pace 92 steps/min at 2 mph, and 110 steps/min at 3 mph. Results are in
-`validation/gyro-reference-report.json`. The onboard firmware still uses its
-original mock accelerometer detector; this gyro estimator runs on the computer
-while developing the replacement. Live settings reset the detector and apply to
+`validation/gyro-reference-report.json`. Firmware 0.3.0 now runs the same Y-gyro detector directly on the board.
+Dashboard axis / threshold edits affect the computer estimator only; board constants
+are defined in `footpod/cadence.h` and require reflashing to change. Live settings reset the detector and apply to
 subsequent samples, while raw recording continues. Replace `Detector.update()` in
 `dashboard.py` as the algorithm is developed.
 
@@ -87,6 +87,29 @@ without overwriting its original `fit.csv`. The mean / median cadence exclude
 five seconds of estimator warm-up. Reference values come from `session.json`;
 the reference does not control the detector or force its estimates. The original
 speed text is preserved when the unit is uncertain.
+
+## Standalone Zwift use
+
+Firmware 0.3.0 computes cadence on the board from signed Y-axis rotation. On battery
+power, no computer or dashboard is required. In Zwift **RUN → CADENCE**, select
+**Carl Foot Pod**, keeping your existing treadmill / speed source under **RUN SPEED**.
+Keep the pod mounted in the same case orientation used for the reference recordings.
+Allow a few seconds of walking for the first cadence estimate. Zero-cadence
+heartbeats continue while standing still. Disconnect the dashboard / recorder before
+pairing Zwift, since the board supports one Bluetooth client at a time.
+
+The exact C++ code used on the board is also compiled and replayed on the computer:
+
+```sh
+rtk .venv/bin/python verify_firmware.py
+```
+
+This check requires `g++` and the local reference recordings. It checks synthetic
+70/92/110/180 spm signals, timer rollover, stop behavior, and every gyro-cycle decision
+against the dashboard on the saved walking sessions. Evidence is in
+`validation/firmware-algorithm-report.json`. Battery diagnostics and raw IMU collection
+remain available. `mock` commands are temporary transport tests; boot defaults to
+actual gyro cadence.
 
 ## Read the battery voltage
 
@@ -174,10 +197,12 @@ the bench check; the collector never opens the USB serial port.
 - Checks sensor identity and configuration, reads only fresh data, and stops reporting
   cadence when sensor data is stale. I²C has a 50 ms timeout; a stalled sensor cannot
   block Bluetooth indefinitely. Reboot to recover after a bus timeout.
-- The mock detector uses acceleration magnitude, 1.30 g detection / 1.08 g rearm,
+- The on-board detector uses signed Y-axis gyroscope rotation, a 40 ms low-pass filter, +40 °/s detection / -20 °/s rearm,
   a 450 ms minimum stride interval, smoothing, and a 3 second stop timeout. It assumes
   one pod on one shoe and doubles the detected foot-strike rate to get total steps/min.
-  Shaking the board can trigger it; it is not a validated gait algorithm.
+  It was checked against five one-minute walking recordings at the three reported
+  paces. Cadence starts after two detected cycles and returns to zero after stopping.
+  Broader gait / mounting validation is still limited to the current shoe setup.
 - In cadence mode, publishes a four-byte Running Speed and Cadence measurement once per second,
   including zero cadence while idle. It advertises continuously and automatically
   advertises again after disconnection. One Bluetooth client is supported at a time.
@@ -214,14 +239,14 @@ Open the board's serial port at 115200 baud and send a newline after each comman
 
 | Command | Effect |
 | --- | --- |
-| `imu` | Return to the mock IMU detector and reset its cadence estimate |
+| `imu` | Return to the live gyro detector and reset its cadence estimate |
 | `mock 109` | Publish fixed 109 steps/min; IMU sampling continues |
 | `mock 180` | Publish fixed 180 steps/min |
 | `stop` | Clear fixed mode and reset the detector; new motion can trigger cadence again |
 
 Fixed cadence accepts 1–255. Commands are temporary; reboot always starts IMU mode.
-The constants near the top of `footpod/footpod.ino` are the calibration knobs.
-Replace `estimateCadence()` when developing the real algorithm. `validation/imu.jsonl`
+The constants in `footpod/cadence.h` are the gyro calibration knobs.
+Change `GyroCadence.update()` when refining the on-board algorithm. `validation/imu.jsonl`
 contains the first stationary capture; raw gyro and acceleration remain available
 through serial for walking/running data collection.
 

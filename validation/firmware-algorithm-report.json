@@ -1,0 +1,42 @@
+{
+  "result": "PASS",
+  "detector": "footpod/cadence.h",
+  "recordings": [
+    {
+      "recording": "/home/carlren/Documents/zwift-foot-pod-firmware/recordings/20261006T052553_045206Z_walking",
+      "reference_spm": 70.5,
+      "mean_firmware_spm": 70.66,
+      "cycles": 35,
+      "max_difference_from_dashboard": 0.004841300000009596
+    },
+    {
+      "recording": "/home/carlren/Documents/zwift-foot-pod-firmware/recordings/20261006T052707_444318Z_walking",
+      "reference_spm": 71.0,
+      "mean_firmware_spm": 70.4,
+      "cycles": 35,
+      "max_difference_from_dashboard": 0.004974399999994716
+    },
+    {
+      "recording": "/home/carlren/Documents/zwift-foot-pod-firmware/recordings/20261006T052902_519778Z_walking",
+      "reference_spm": 92.0,
+      "mean_firmware_spm": 92.06,
+      "cycles": 46,
+      "max_difference_from_dashboard": 0.004990800000001627
+    },
+    {
+      "recording": "/home/carlren/Documents/zwift-foot-pod-firmware/recordings/20261006T053044_112366Z_walking",
+      "reference_spm": 92.0,
+      "mean_firmware_spm": 92.18,
+      "cycles": 46,
+      "max_difference_from_dashboard": 0.004952700000004029
+    },
+    {
+      "recording": "/home/carlren/Documents/zwift-foot-pod-firmware/recordings/20261006T053216_845529Z_walking",
+      "reference_spm": 110.0,
+      "mean_firmware_spm": 109.98,
+      "cycles": 55,
+      "max_difference_from_dashboard": 0.004783999999986577
+    }
+  ],
+  "synthetic_checks": "70/92/110/180 spm, microsecond rollover, stationary rotation, stop timeout"
+}

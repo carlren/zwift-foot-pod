@@ -1,0 +1,25 @@
+{
+  "firmware": "0.3.0",
+  "result": "PASS",
+  "normal_mode": true,
+  "imu": {
+    "version": 1,
+    "imu_ok": true,
+    "collecting": false,
+    "subscribed": false,
+    "who_am_i": 106,
+    "sent": 2109,
+    "dropped": 3,
+    "imu_errors": 0
+  },
+  "idle_packets": [
+    "00000000",
+    "00000000",
+    "00000000",
+    "00000000",
+    "00000000"
+  ],
+  "binary_sha256": "355d0f5fbdd45074d6bb1c7e437c410619b0e8a2942233e5da6f747194220533",
+  "pc_connection_released": true,
+  "algorithm": "signed Y gyro cycles; 40/-20 deg/s; 40ms filter; 450ms minimum stride"
+}
