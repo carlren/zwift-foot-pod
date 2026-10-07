@@ -17,6 +17,21 @@ The assembled pod clips over the shoelaces. Inside the blue case are the XIAO
 board and a pouch battery. The yellow arrow marks the mounting orientation used
 for this setup; keep the sensor orientation consistent when comparing recordings.
 
+## Mounting and walking-desk setup
+
+<p>
+  <img src="docs/images/foot-pod-mounting-clip.jpg" alt="Rear of the blue foot pod case showing the long turquoise mounting clip attached to the back" width="320">
+  <img src="docs/images/walking-desk-setup.jpg" alt="UREVO walking pad beneath a standing desk with keyboard, displays and front-mounted arm supports" width="320">
+</p>
+
+The rear view shows the long mounting clip attached to the case, complementing
+the photo of the pod on the shoelaces above. Secure the case so it stays in the
+same orientation during walking and recording.
+
+The second photo shows the walking pad under the standing desk, with displays,
+a keyboard and arm supports. This is the physical setup used alongside the shoe
+pod, Zwift and the phone companion.
+
 ## What it does
 
 - Computes cadence on the pod, without a computer or phone relay, and publishes
@@ -210,7 +225,7 @@ rtk .venv/bin/python test_companion.py # per-client state and battery curve
 | [`collect.py`](collect.py), [`replay.py`](replay.py), [`battery.py`](battery.py) | BLE collection, offline gyro replay and battery reads |
 | [`recordings/`](recordings/) | All 20 saved local sessions, including five walking references, bench captures and partial / interrupted checks |
 | [`validation/`](validation/) | Bench / replay / emulator reports and desktop screenshots |
-| [`docs/images/`](docs/images/) | All five original user-supplied photos / screenshots, copied without editing |
+| [`docs/images/`](docs/images/) | All seven original user-supplied photos / screenshots, copied without editing |
 | [`docs/development.md`](docs/development.md) | Detailed desktop, firmware, Bluetooth and build guide |
 
 Session folders include raw data and any saved fits / annotations. Partial and
