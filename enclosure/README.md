@@ -51,5 +51,6 @@ The package includes `references/sense-official-XIAO-nRF52840 v15.step`, a
 third-party board reference. Seeed provides an official Sense 3D model through
 [its board documentation](https://wiki.seeedstudio.com/XIAO_BLE/). The supplied
 package and STEP header do not state redistribution terms. Confirm those terms
-before applying a project-wide open-source license to that reference or the ZIP
-that contains it. No new license has been applied to the imported material.
+for that reference or the ZIP that contains it. The project’s MIT license covers
+our original Python CAD generation/render software, and does not relicense this
+board reference or the STL/STEP assets. See [license scope and notices](../THIRD_PARTY_NOTICES.md).

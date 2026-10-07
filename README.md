@@ -6,7 +6,7 @@ to **Zwift over Bluetooth**. **Foot Pod Lab** on Android previews the six-axis I
 records sessions for algorithm development, and reads the pod’s battery voltage
 and estimated charge level.
 
-**Firmware:** 0.4.0 · **Android app:** 1.0.1 · **BLE name:** `Carl Foot Pod`
+**Firmware:** 0.4.0 · **Android app:** 1.0.1 · **BLE name:** `Carl Foot Pod` · **Software license:** [MIT](LICENSE)
 
 <p>
   <img src="docs/images/foot-pod-on-shoe.jpg" alt="Blue foot pod case clipped to a shoe’s laces, with its orientation arrow pointing toward the toe" width="320">
@@ -259,5 +259,13 @@ the repository.
 The [public-release audit](docs/public-release-audit.md) found no credential leaks
 in the scanned history, enclosure or release contents. The repository still
 contains personal author metadata, device identifiers, workout data and photos.
-Review those publication choices, select a project license and confirm the
-third-party board reference’s redistribution terms before making it public.
+Review those personal-data publication choices before making it public.
+Project-owned software is now MIT-licensed; vendor components retain their
+upstream terms, as described in [the licensing notices](THIRD_PARTY_NOTICES.md).
+
+## License
+
+Project-owned software and associated software documentation are licensed under
+[MIT](LICENSE), including commercial reuse, modification and redistribution with
+the copyright/license notice retained. [Third-party notices](THIRD_PARTY_NOTICES.md)
+identify upstream dependencies and material outside that software license grant.

@@ -8,8 +8,9 @@ No credential leaks were detected in the scanned repository history, enclosure
 package, or downloaded release contents. Publication would nevertheless expose
 personal information already present in the project. Choose whether to retain
 that information before changing visibility; the repository is not anonymous.
-The project also lacks a root open-source license, and the imported third-party
-board reference requires a licensing decision.
+Licensing update after this audit: the project-owned software now has an MIT
+license. Upstream components and the third-party board CAD reference remain
+under their own terms; see [license scope and notices](../THIRD_PARTY_NOTICES.md).
 
 ## Scope and checks
 
@@ -59,10 +60,11 @@ working files. Old source/validation ZIPs still contain device IDs and paths.
 No history rewriting, image editing, release replacement or data deletion was
 performed during this audit.
 
-Choose an open-source license for the project-owned code/design. The imported
-package has no licensing notice, and includes a Seeed board-reference STEP file;
-confirm redistribution terms or remove/replace that reference in both the
-extracted files and the original bundled ZIP before licensing/publication.
+The original software is now MIT-licensed, as requested by the owner. The
+imported CAD package has no licensing notice and includes an unchanged Seeed
+board-reference STEP file. That reference and STL/STEP assets are outside the
+software MIT grant. Its separate terms still apply to redistribution; the
+software license does not change the contents or terms of the original ZIP.
 The Gradle wrapper's existing upstream notices must also be retained.
 
 Making a repository public is separate from granting an open-source license:

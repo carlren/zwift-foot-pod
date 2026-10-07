@@ -105,3 +105,8 @@ Android implementation follows the official guidance for
 [BLE permissions](https://developer.android.com/develop/connectivity/bluetooth/bt-permissions),
 [background BLE connections](https://developer.android.com/develop/connectivity/bluetooth/ble/background),
 and [edge-to-edge window insets](https://developer.android.com/develop/ui/views/layout/edge-to-edge).
+
+## License
+
+The project-owned Android application is [MIT-licensed](../LICENSE).
+See [upstream notices and license scope](../THIRD_PARTY_NOTICES.md).
