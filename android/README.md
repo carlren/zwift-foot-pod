@@ -74,8 +74,8 @@ This compiles the exact Java protocol / detector / recording-window code on the
 host, checks malformed packets, signed raw values, unsigned sequence/time wraps,
 packet gaps, record boundaries, countdown, reference calculation, synthetic cadence
 and stop timeout. It replays all five original walking recordings and checks every
-stride decision and fit against the validated desktop detector; those local raw
-recordings are required and are not in Git. Evidence is in
+stride decision and fit against the validated desktop detector; the raw reference
+recordings are included in this repository. Evidence is in
 `validation/android-protocol-report.json`.
 
 `app/src/androidTest/.../TestProbe.java` is a dependency-free Android instrumentation
@@ -94,10 +94,12 @@ rtk adb -s EMULATOR_SERIAL shell am instrument -w com.carlren.footpod.test/com.c
 Do not replace a release installation containing wanted recordings with a debug
 build: the signing keys differ. The supplied APK was signature-verified, installed,
 launched and visually checked in an Android 15 emulator. Native Android storage
-checks passed there. This does **not** validate Samsung Bluetooth behavior, screen
-lock recording on the Galaxy, or two physical phone-plus-Zwift radio links; those
-require the actual phone. Firmware 0.4.0's prior hardware check exercised concurrent
-cadence / raw IMU / battery data using one computer central.
+checks passed there. The [user-supplied Galaxy screenshot](../docs/images/android-live-preview.jpg)
+now shows live BLE preview on the physical phone: 114 steps/min, 105.0 Hz, 1,157
+samples with zero displayed gaps, and battery power at 4.144 V / approximately 96%.
+It does not establish screen-lock recording, battery runtime or a sustained test
+of two physical phone-plus-Zwift radio links. Firmware 0.4.0's prior bench check
+exercised concurrent cadence / raw IMU / battery data using one computer central.
 
 Android implementation follows the official guidance for
 [BLE permissions](https://developer.android.com/develop/connectivity/bluetooth/bt-permissions),

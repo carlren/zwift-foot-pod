@@ -1,0 +1,21 @@
+{
+  "algorithm": "signed-gyro-cycle-prototype-v1",
+  "settings": {
+    "peak": 40.0,
+    "rearm": -20.0,
+    "min_stride_ms": 450.0,
+    "axis": "y"
+  },
+  "recording": "recordings/20261006T053216_845529Z_walking",
+  "duration_s": 59.979493,
+  "stride_cycles": 55,
+  "warmup_excluded_s": 5,
+  "mean_cadence_spm": 109.98,
+  "median_cadence_spm": 110.0,
+  "reference_spm": 110.0,
+  "reference_spm_range": [
+    110,
+    110
+  ],
+  "reference_speed_entered": "3mph"
+}

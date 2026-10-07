@@ -1,0 +1,42 @@
+{
+  "started_utc": "2026-10-06T05:09:38.127969+00:00",
+  "label": "second-recording-check",
+  "seconds_requested": 30.0,
+  "foot": "left",
+  "reference_spm": null,
+  "speed_kph": null,
+  "protocol_version": 1,
+  "nominal_hz": 104,
+  "accel_g_per_lsb": 0.000244,
+  "gyro_dps_per_lsb": 0.035,
+  "accel_range_g": 8,
+  "gyro_range_dps": 1000,
+  "completed": true,
+  "samples": 43,
+  "missing_packets": 0,
+  "clipped_samples": 0,
+  "timing_gaps_over_20ms": 0,
+  "max_interval_us": 10742,
+  "address": "FF:E3:4B:BE:98:B1",
+  "firmware": "0.2.1",
+  "status_before": {
+    "version": 1,
+    "imu_ok": true,
+    "collecting": false,
+    "subscribed": false,
+    "who_am_i": 106,
+    "sent": 5385,
+    "dropped": 0,
+    "imu_errors": 0
+  },
+  "battery": {
+    "voltage_v": 3.96,
+    "charging": true,
+    "usb_power": true
+  },
+  "stopped_by_user": true,
+  "ended_utc": "2026-10-06T05:09:38.527572+00:00",
+  "device_duration_s": 0.399414,
+  "received_hz": 105.154,
+  "sampled_hz": 105.154
+}

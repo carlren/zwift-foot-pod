@@ -1,0 +1,50 @@
+{
+  "started_utc": "2026-10-06T05:30:44.112538+00:00",
+  "label": "walking",
+  "seconds_requested": 60.0,
+  "foot": "left",
+  "reference_spm": 92.0,
+  "speed_kph": 3.218688,
+  "protocol_version": 1,
+  "nominal_hz": 104,
+  "accel_g_per_lsb": 0.000244,
+  "gyro_dps_per_lsb": 0.035,
+  "accel_range_g": 8,
+  "gyro_range_dps": 1000,
+  "completed": true,
+  "samples": 6295,
+  "missing_packets": 5,
+  "clipped_samples": 0,
+  "timing_gaps_over_20ms": 2,
+  "max_interval_us": 40039,
+  "address": "FF:E3:4B:BE:98:B1",
+  "firmware": "0.2.1",
+  "status_before": {
+    "version": 1,
+    "imu_ok": true,
+    "collecting": false,
+    "subscribed": false,
+    "who_am_i": 106,
+    "sent": 69990,
+    "dropped": 188,
+    "imu_errors": 0
+  },
+  "battery": {
+    "voltage_v": 3.951,
+    "charging": false,
+    "usb_power": false
+  },
+  "stopped_by_user": false,
+  "ended_utc": "2026-10-06T05:31:44.122556+00:00",
+  "device_duration_s": 59.984375,
+  "received_hz": 104.927,
+  "sampled_hz": 105.011,
+  "reference_spm_range": [
+    92,
+    92
+  ],
+  "reference_source": "user_reported_count",
+  "reference_speed_entered": "2mph",
+  "speed_mph": 2.0,
+  "reference_steps_scope": "both_feet"
+}

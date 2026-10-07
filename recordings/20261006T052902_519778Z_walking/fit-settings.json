@@ -1,0 +1,11 @@
+{
+  "algorithm": "firmware-threshold-prototype",
+  "changes": [
+    {
+      "time_s": 0,
+      "peak": 1.3,
+      "rearm": 1.08,
+      "min_stride_ms": 450.0
+    }
+  ]
+}
