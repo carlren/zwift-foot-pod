@@ -127,6 +127,7 @@ Full app behavior and export details are in [the Android guide](android/README.m
 
 <p>
   <img src="docs/images/strava-virtual-run.jpg" alt="Strava Virtual Run screenshot showing two one-mile splits and a final 0.3-mile split, plus a pace graph" width="360">
+  <img src="docs/images/strava-cadence.jpg" alt="Strava Virtual Run cadence graph showing 98 steps per minute average, 156 maximum, and a selected reading of 100 at 1.25 miles" width="360">
 </p>
 
 The supplied Strava screenshot shows a **Virtual Run** with two one-mile splits
@@ -134,6 +135,11 @@ and a final 0.3-mile split. Pace and heart rate come from the separate sources
 shown in Zwift. The screenshots illustrate the workout and live preview; use the
 reference recordings below to assess cadence accuracy. The Zwift and phone images
 show different cadence readings without synchronized timestamps for comparison.
+
+The additional Strava **Cadence** screenshot shows cadence in the recorded Virtual
+Run: **98 spm average**, **156 spm maximum**, and a selected reading of **100 spm
+at 1.25 miles**. These are Strava’s displayed activity values; the manual-reference
+recordings below provide the separate accuracy checks.
 
 ## How cadence is estimated
 
@@ -179,6 +185,7 @@ are saved separately under [`validation/`](validation/).
 | --- | --- |
 | [Galaxy live screenshot](docs/images/android-live-preview.jpg) | On-phone BLE preview, RSC cadence, matching local gyro fit, battery reads and a displayed 105 Hz stream with zero gaps over 1,157 samples |
 | [Zwift pairing screenshot](docs/images/zwift-pairing.jpg) | Carl Foot Pod connected as Zwift cadence, alongside separate speed and heart-rate sources |
+| [Strava cadence screenshot](docs/images/strava-cadence.jpg) | Cadence displayed in the Virtual Run activity: 98 spm average, 156 spm maximum, 100 spm at the selected 1.25-mile point |
 | [Firmware 0.4.0 bench report](validation/companion-report.json) | 2,093 samples at 104.995 Hz, zero missing packets, 20 concurrent RSC frames, battery reads / notifications, free-slot advertising and reconnect reset on one physical central |
 | [Hardware regression report](validation/report.json) | Sensor identity, sampling, RSC packet format, mock-value transport checks, zero-cadence heartbeat and reconnect |
 | [Android app checks](validation/android-app-report.json) | Signed APK, emulator installation / launch, decoder / timing checks, native recording files, ZIP sharing and interruption recovery |
@@ -225,7 +232,7 @@ rtk .venv/bin/python test_companion.py # per-client state and battery curve
 | [`collect.py`](collect.py), [`replay.py`](replay.py), [`battery.py`](battery.py) | BLE collection, offline gyro replay and battery reads |
 | [`recordings/`](recordings/) | All 20 saved local sessions, including five walking references, bench captures and partial / interrupted checks |
 | [`validation/`](validation/) | Bench / replay / emulator reports and desktop screenshots |
-| [`docs/images/`](docs/images/) | All seven original user-supplied photos / screenshots, copied without editing |
+| [`docs/images/`](docs/images/) | All eight original user-supplied photos / screenshots, copied without editing |
 | [`docs/development.md`](docs/development.md) | Detailed desktop, firmware, Bluetooth and build guide |
 
 Session folders include raw data and any saved fits / annotations. Partial and
