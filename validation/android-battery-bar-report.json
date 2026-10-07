@@ -1,0 +1,22 @@
+{
+  "result": "PASS",
+  "checked_utc": "2026-10-07T03:31:21.885116+00:00",
+  "version": "1.0.1",
+  "version_code": 2,
+  "apk_sha256": "dbd26bf372d076a90556d5c718c5449677898e5ebd22a11f5f2bb3d38b3d56bf",
+  "apk_bytes": 79984,
+  "signed_apk_verified": true,
+  "lint_errors": 0,
+  "emulator": "Android 15 / API 35",
+  "upgrade_installation": "PASS: installed over signed 1.0.0 with adb install -r; no uninstall",
+  "interface": "PASS: dedicated battery card and native progress bar, unknown percentage dash, Record disabled before samples",
+  "changes": "Dedicated estimated-percent bar with green/amber/red fill, voltage/charger status, accessible state and disconnected last-read label",
+  "galaxy_live_bluetooth": "Not tested on the physical phone in this update",
+  "google_drive": {
+    "id": "1NDdZ-bwayQZ8dlKcvDCeHdjqc7yNuZNr",
+    "url": "https://drive.google.com/file/d/1NDdZ-bwayQZ8dlKcvDCeHdjqc7yNuZNr/view?usp=drivesdk",
+    "name": "Foot-Pod-Lab-1.0.1.apk",
+    "size_bytes": 79984,
+    "metadata_verified": true
+  }
+}

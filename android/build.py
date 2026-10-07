@@ -42,7 +42,8 @@ def main():
     signer = sdk/'build-tools/35.0.0/apksigner'
     subprocess.run([str(signer),'verify','--verbose',str(apk)],env=env,check=True)
     output = ROOT/'dist'; output.mkdir(exist_ok=True)
-    destination = output/'Foot-Pod-Lab-1.0.0.apk'
+    version = json.loads((apk.parent/'output-metadata.json').read_text())['elements'][0]['versionName']
+    destination = output/f'Foot-Pod-Lab-{version}.apk'
     shutil.copyfile(apk,destination)
     digest = hashlib.sha256(destination.read_bytes()).hexdigest()
     (output/'SHA256SUMS.txt').write_text(digest+'  '+destination.name+'\n')

@@ -1,20 +1,23 @@
 # Foot Pod Lab for Android
 
 Personal companion app for Carl's XIAO Sense foot pod, firmware **0.4.0 or newer**.
-Version **1.0.0**, package `com.carlren.footpod`. Native Java / Android framework,
+Version **1.0.1**, package `com.carlren.footpod`. Native Java / Android framework,
 no runtime third-party libraries, account sign-in or Internet permission. Minimum
 Android 12; targets Android 15 and can run on newer Android phones.
 
 ## Install and use
 
-Download [Foot-Pod-Lab-1.0.0.apk](https://drive.google.com/file/d/1nzFJdNqu-e4rJ_Pa3qmB6X4gVdH134VP/view?usp=drivesdk) on the Galaxy,
-open it, and allow installation from that app if Android prompts. Open **Foot Pod
+Download [Foot-Pod-Lab-1.0.1.apk](https://drive.google.com/file/d/1NDdZ-bwayQZ8dlKcvDCeHdjqc7yNuZNr/view?usp=drivesdk) on the Galaxy,
+install it over the existing app to keep recordings, and allow installation from that app if Android prompts. Open **Foot Pod
 Lab**, grant **Nearby devices**, and allow notifications for connection / recording
 status. Turn on Bluetooth and power the pod. No Android Settings pairing is needed.
 
 1. Tap **Connect**. Live gyro / accelerometer graphs and cadence appear immediately;
    connecting creates no recording files. Battery voltage is refreshed every five
    seconds, while estimated battery percentage also receives change notifications.
+   A dedicated **Foot pod battery** card shows a fill bar, estimated percentage,
+   voltage and charging state. The bar is green above 50%, amber at 21–50%, red at
+   0–20%. Unknown percentage stays “—”; disconnected readings are labeled “last read”.
 2. Choose duration (default 60 seconds), label, optional reference steps/min and
    treadmill speed in mph. Tap **Record** only when the preview looks right.
 3. The countdown stops recording automatically. **Stop recording** saves early;
@@ -55,7 +58,7 @@ rtk python3 android/build.py
 
 The build script accepts `JAVA_HOME` / `ANDROID_HOME` on another computer. It
 builds the release, runs Android lint, verifies its APK signature, and copies it
-to `android/dist/Foot-Pod-Lab-1.0.0.apk` with a SHA-256 checksum. Its persistent
+to `android/dist/Foot-Pod-Lab-1.0.1.apk` with a SHA-256 checksum. Its persistent
 personal signing key and password are outside this repository in
 `~/.local/share/foot-pod-lab/`, with restricted permissions. Preserve those files
 privately to sign future updates; never upload or commit them. Only the APK is
