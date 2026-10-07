@@ -54,6 +54,22 @@ Use this pod as a **cadence source**. The speed field required by RSC currently
 uses a placeholder 0.70 m step length. Keep the treadmill or another measured
 speed source under Zwift’s **RUN SPEED**.
 
+## Parts and purchase links
+
+| Part | Quantity | Purchase / source |
+| --- | --- | --- |
+| Seeed XIAO nRF52840 Sense | 1 | [Amazon — original board purchase link](https://a.co/d/03LYRqK2) · [Direct listing](https://www.amazon.com/dp/B0DJ6PZGB7) |
+| LiPo pouch battery | 1 | The V5 design uses a measured **26.31 × 25.07 × 8.66 mm** cell; the exact purchased battery listing has not been supplied. |
+| Housing, sliding cover, board carrier, adapter and lace base | 1 set | [Printable enclosure parts](enclosure/README.md#print-files) · [Complete design ZIP](enclosure/low-profile-v5-package.zip) |
+| PLA or PETG filament | As needed | Materials specified in the [print and assembly guide](enclosure/low-profile-v5/PRINT-AND-ASSEMBLE.md#printing). |
+| Thin battery mounting tape and CA glue | As needed | The design allows **0.20 mm** tape under the battery and uses CA glue for the adapter; see [assembly instructions](enclosure/low-profile-v5/PRINT-AND-ASSEMBLE.md#assembly-and-use). |
+
+Select the **original Sense model with the on-board IMU** for the firmware and
+board carrier in this repository. The Amazon link above is the board link Carl
+provided when buying this project's hardware. Battery selection must match the
+cell dimensions and clearances in the enclosure design; no unverified battery
+product link is presented as the one used here.
+
 ## Get the firmware and app
 
 | Component | Download / source |
