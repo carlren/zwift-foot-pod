@@ -1,0 +1,110 @@
+{
+  "units": "mm",
+  "battery_mm": [
+    26.31,
+    25.07,
+    8.66
+  ],
+  "enclosure_mm": [
+    70.0,
+    32.0,
+    11.6
+  ],
+  "floor_thickness_mm": 1.2,
+  "cover_thickness_mm": 1.0,
+  "battery_headroom_mm": 0.34,
+  "hardware_count": 0,
+  "assembly": "CA-glue the separate adapter to the flat housing base.",
+  "glue_gap_mm": 0.1,
+  "board_carrier": "Exact tested v2 STL, unchanged.",
+  "lid_rail_clearance_per_side_mm": 0.2,
+  "dock_clearance_per_side_mm": 0.2,
+  "pcb_pocket_mm": [
+    21.35,
+    18.2
+  ],
+  "wire_gate_width_mm": 5.4,
+  "parts": {
+    "body": {
+      "size_mm": [
+        70.0,
+        32.0,
+        11.6
+      ],
+      "volume_cm3": 6.348,
+      "watertight": true,
+      "flat_bed_contact_mm2": 2224.8
+    },
+    "sliding-cover": {
+      "size_mm": [
+        70.1,
+        32.0,
+        10.2
+      ],
+      "volume_cm3": 2.274,
+      "watertight": true,
+      "flat_bed_contact_mm2": 1941.5
+    },
+    "board-carrier": {
+      "size_mm": [
+        31.83,
+        27.2,
+        3.6
+      ],
+      "volume_cm3": 1.089,
+      "watertight": true,
+      "flat_bed_contact_mm2": 759.0
+    },
+    "glue-on-adapter": {
+      "size_mm": [
+        40.0,
+        32.0,
+        4.3
+      ],
+      "volume_cm3": 1.872,
+      "watertight": true,
+      "flat_bed_contact_mm2": 1209.4
+    },
+    "lace-base": {
+      "size_mm": [
+        48.0,
+        34.3,
+        3.9
+      ],
+      "volume_cm3": 2.057,
+      "watertight": true,
+      "flat_bed_contact_mm2": 1128.6
+    }
+  },
+  "estimated_latch_strain_percent": {
+    "dock": 0.24,
+    "cover": 0.13
+  },
+  "complete_mount_mm": [
+    71.9,
+    36.3,
+    17.0
+  ],
+  "checks": [
+    "Five valid, connected, watertight print parts; zero metal hardware.",
+    "Each exported print has a quantified flat bed-contact face.",
+    "Housing bottom is flat; adapter glue face prints flat after flipping.",
+    "No assembled overlaps with the measured cell or official board model.",
+    "Board carrier STL is byte-identical to the tested v2 part.",
+    "V4 glue-on adapter and shoe base STLs are unchanged.",
+    "Battery contact dimensions retained; ledge undersides have 45-degree print ramps.",
+    "Sliding cover checked over the electronics at seven offsets with latch lifted.",
+    "Quick-release docking path checked at seven offsets with lateral latch released.",
+    "Both catches block withdrawal when their tabs are not released.",
+    "Top-loading battery and connected board/carrier clearance checked."
+  ],
+  "print_design": {
+    "material_targets": [
+      "PLA",
+      "PETG"
+    ],
+    "supports": "Designed without generated supports; short bridges may still need printer tuning.",
+    "rail_wall_inward_slope_degrees": 23.5,
+    "case_upper_rail_roof_slope_degrees": 42.3
+  }
+}

@@ -32,6 +32,11 @@ The second photo shows the walking pad under the standing desk, with displays,
 a keyboard and arm supports. This is the physical setup used alongside the shoe
 pod, Zwift and the phone companion.
 
+The [V5 enclosure design](enclosure/README.md) is now included: printable STLs,
+editable STEP/CadQuery files, previews and the original print/assembly guide.
+Download the [exact enclosure package](enclosure/low-profile-v5-package.zip) or
+browse the [individual parts](enclosure/low-profile-v5/).
+
 ## What it does
 
 - Computes cadence on the pod, without a computer or phone relay, and publishes
@@ -53,6 +58,7 @@ speed source under Zwift’s **RUN SPEED**.
 
 | Component | Download / source |
 | --- | --- |
+| V5 enclosure | [Original package](enclosure/low-profile-v5-package.zip) · [Design and print guide](enclosure/README.md) |
 | Firmware 0.4.0 | [GitHub release, DFU package, HEX and validation](https://github.com/carlren/zwift-foot-pod/releases/tag/v0.4.0) |
 | Android app 1.0.1 | [GitHub APK release](https://github.com/carlren/zwift-foot-pod/releases/tag/android-v1.0.1) · [APK on Google Drive](https://drive.google.com/file/d/1NDdZ-bwayQZ8dlKcvDCeHdjqc7yNuZNr/view?usp=drivesdk) |
 | Android source and instructions | [android/README.md](android/README.md) |
@@ -226,6 +232,7 @@ rtk .venv/bin/python test_companion.py # per-client state and battery curve
 
 | Path | Contents |
 | --- | --- |
+| [`enclosure/`](enclosure/) | Original V5 package, extracted STL/STEP/CadQuery files, previews and assembly instructions |
 | [`footpod/`](footpod/) | Firmware, gyro detector, client isolation and battery curve |
 | [`android/`](android/) | Android source, Gradle wrapper, signing build script and instrumentation checks |
 | [`dashboard.py`](dashboard.py), [`dashboard.html`](dashboard.html) | Desktop live visualization and recording controls |
@@ -246,3 +253,11 @@ in Git. Installable firmware and APKs, source archives and checksums are attache
 to the GitHub releases. Toolchain downloads, dependencies, caches and local build
 outputs are excluded from Git; private Android signing credentials stay outside
 the repository.
+
+## Public-release review
+
+The [public-release audit](docs/public-release-audit.md) found no credential leaks
+in the scanned history, enclosure or release contents. The repository still
+contains personal author metadata, device identifiers, workout data and photos.
+Review those publication choices, select a project license and confirm the
+third-party board reference’s redistribution terms before making it public.

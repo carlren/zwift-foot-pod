@@ -1,2 +1,4 @@
 # Preserve capture CSV bytes; the recorder intentionally writes CRLF line endings.
 recordings/**/*.csv -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+# Keep the imported enclosure bundle byte-for-byte, including upstream formatting.
+enclosure/low-profile-v5/** -text -whitespace
